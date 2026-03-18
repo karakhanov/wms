@@ -1,0 +1,98 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.logo {
+  padding: 1rem 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav {
+  flex: 1;
+  padding: 0.75rem 0;
+}
+
+.navLink,
+.navActive {
+  display: block;
+  padding: 0.5rem 1.25rem;
+  color: var(--muted);
+  transition: color 0.15s, background 0.15s;
+}
+
+.navLink:hover {
+  color: var(--text);
+}
+
+.navActive {
+  color: var(--accent);
+  background: rgba(88, 166, 255, 0.08);
+  border-right: 2px solid var(--accent);
+}
+
+.main {
+  flex: 1;
+  padding: 1.5rem 2rem;
+  overflow: auto;
+}
+
+.langSwitch {
+  padding: 0.5rem 1.25rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.langBtn,
+.langActive {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+}
+
+.langBtn:hover {
+  color: var(--text);
+}
+
+.langActive {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.user {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.875rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.logout {
+  background: none;
+  border: none;
+  color: var(--accent);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.logout:hover {
+  text-decoration: underline;
+}

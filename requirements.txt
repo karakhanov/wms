@@ -1,0 +1,14 @@
+# Django & server (Django 5.2+ нужен для Python 3.14)
+Django>=5.2,<6
+djangorestframework>=3.14
+django-cors-headers>=4.3
+django-filter>=23.5
+gunicorn>=21.0
+
+# DB & auth
+psycopg2-binary>=2.9
+djangorestframework-simplejwt>=5.3
+
+# Utils
+python-dotenv>=1.0
+Pillow>=10.0

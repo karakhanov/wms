@@ -1,0 +1,146 @@
+{
+  "app": {
+    "title": "Bashkent WMS",
+    "subtitle": "Warehouse management system"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "products": "Products",
+    "categories": "Categories",
+    "warehouse": "Warehouse",
+    "suppliers": "Suppliers",
+    "receipts": "Receipts",
+    "orders": "Shipments",
+    "stock": "Stock",
+    "transfers": "Transfers",
+    "inventory": "Inventory",
+    "reports": "Reports",
+    "users": "Users"
+  },
+  "login": {
+    "title": "Bashkent WMS",
+    "subtitle": "Warehouse management system",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "error": "Login error"
+  },
+  "common": {
+    "logout": "Logout",
+    "loading": "Loading…",
+    "none": "—",
+    "add": "Add",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "confirmDelete": "Delete this record?",
+    "photo": "Photo"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "lead": "Choose a module to work with",
+    "productsDesc": "Product catalog",
+    "warehouseDesc": "Zones, racks, cells",
+    "receiptsDesc": "Goods receipt",
+    "ordersDesc": "Orders and picking",
+    "stockDesc": "Current stock by cell",
+    "transfersDesc": "Between cells",
+    "inventoryDesc": "Recount and adjustments",
+    "reportsDesc": "Movement, shortage, popular",
+    "usersDesc": "Roles and access"
+  },
+  "products": {
+    "title": "Products",
+    "description": "Description",
+    "active": "Active",
+    "new": "New product",
+    "editTitle": "Edit product",
+    "lead": "Catalog: name, SKU, barcode, category, unit, amount.",
+    "sku": "SKU",
+    "name": "Name",
+    "barcode": "Barcode",
+    "category": "Category",
+    "unit": "Unit",
+    "amount": "Amount"
+  },
+  "categories": {
+    "title": "Categories",
+    "name": "Name",
+    "parent": "Parent",
+    "new": "New category"
+  },
+  "suppliers": {
+    "title": "Suppliers",
+    "name": "Name",
+    "inn": "INN",
+    "contact": "Contact",
+    "new": "New supplier"
+  },
+  "warehouse": {
+    "title": "Warehouse",
+    "lead": "Structure: Warehouse → Zone → Rack → Cell",
+    "name": "Warehouse",
+    "address": "Address"
+  },
+  "receipts": {
+    "title": "Goods receipt",
+    "lead": "Receipt documents: date, employee, supplier, items.",
+    "id": "No",
+    "date": "Date",
+    "employee": "Employee",
+    "supplier": "Supplier"
+  },
+  "orders": {
+    "title": "Shipments",
+    "lead": "Orders: Created, Picking, Shipped.",
+    "id": "No",
+    "date": "Date",
+    "status": "Status",
+    "client": "Client"
+  },
+  "stock": {
+    "title": "Stock",
+    "lead": "Current stock by cells.",
+    "product": "Product (SKU)",
+    "cell": "Cell",
+    "quantity": "Quantity"
+  },
+  "transfers": {
+    "title": "Transfers",
+    "lead": "Transfer between cells.",
+    "id": "No",
+    "date": "Date",
+    "employee": "Employee"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "lead": "Recount, compare with system, adjustment acts.",
+    "id": "No",
+    "date": "Date",
+    "warehouse": "Warehouse",
+    "completed": "Completed"
+  },
+  "reports": {
+    "title": "Reports and history",
+    "lead": "Movement, receipts, shipments, popular products, shortages.",
+    "shortage": "Shortage (below min. stock)",
+    "popular": "Popular products (by shipments)",
+    "minQty": "Min",
+    "current": "Current",
+    "shipped": "Shipped"
+  },
+  "users": {
+    "title": "Users",
+    "lead": "Accounts, roles (Admin, Manager, Storekeeper).",
+    "username": "Username",
+    "fullName": "Full name",
+    "role": "Role"
+  },
+  "lang": {
+    "ru": "Русский",
+    "uz": "Oʻzbek",
+    "en": "English"
+  }
+}

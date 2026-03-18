@@ -1,0 +1,146 @@
+{
+  "app": {
+    "title": "Bashkent WMS",
+    "subtitle": "Ombor hisobi tizimi"
+  },
+  "nav": {
+    "dashboard": "Boshqaruv paneli",
+    "products": "Mahsulotlar",
+    "categories": "Toifalar",
+    "warehouse": "Ombor",
+    "suppliers": "Yetkazib beruvchilar",
+    "receipts": "Qabul",
+    "orders": "Yuklash",
+    "stock": "Qoldiqlar",
+    "transfers": "Koʻchirish",
+    "inventory": "Inventarizatsiya",
+    "reports": "Hisobotlar",
+    "users": "Foydalanuvchilar"
+  },
+  "login": {
+    "title": "Bashkent WMS",
+    "subtitle": "Ombor hisobi tizimi",
+    "username": "Login",
+    "password": "Parol",
+    "submit": "Kirish",
+    "error": "Kirish xatosi"
+  },
+  "common": {
+    "logout": "Chiqish",
+    "loading": "Yuklanmoqda…",
+    "none": "—",
+    "add": "Qoʻshish",
+    "edit": "Tahrirlash",
+    "delete": "Oʻchirish",
+    "save": "Saqlash",
+    "cancel": "Bekor qilish",
+    "back": "Orqaga",
+    "confirmDelete": "Yozuvni oʻchirish?",
+    "photo": "Rasm"
+  },
+  "dashboard": {
+    "title": "Boshqaruv paneli",
+    "lead": "Ishlash uchun modulni tanlang",
+    "productsDesc": "Nomenklatura maʼlumotnomasi",
+    "warehouseDesc": "Zonalar, stellantar, hujayralar",
+    "receiptsDesc": "Mahsulot qabul qilish",
+    "ordersDesc": "Buyurtmalar va yigʻish",
+    "stockDesc": "Hujayralar boʻyicha qoldiqlar",
+    "transfersDesc": "Hujayralar orasida",
+    "inventoryDesc": "Qayta hisoblash va aktlar",
+    "reportsDesc": "Harakat, tanqislik, mashhurlar",
+    "usersDesc": "Rollar va ruxsat"
+  },
+  "products": {
+    "title": "Mahsulotlar",
+    "description": "Tavsif",
+    "active": "Faol",
+    "new": "Yangi mahsulot",
+    "editTitle": "Mahsulotni tahrirlash",
+    "lead": "Nomenklatura: nomi, artikul (SKU), shtrixkod, toifasi, oʻlchov birligi, summa.",
+    "sku": "SKU",
+    "name": "Nomi",
+    "barcode": "Shtrixkod",
+    "category": "Toifa",
+    "unit": "Birlik",
+    "amount": "Summa"
+  },
+  "categories": {
+    "title": "Toifalar",
+    "name": "Nomi",
+    "parent": "Ota",
+    "new": "Yangi toifa"
+  },
+  "suppliers": {
+    "title": "Yetkazib beruvchilar",
+    "name": "Nomi",
+    "inn": "INN",
+    "contact": "Aloqa",
+    "new": "Yangi yetkazib beruvchi"
+  },
+  "warehouse": {
+    "title": "Ombor",
+    "lead": "Tuzilma: Ombor → Zona → Stellantar → Hujayra",
+    "name": "Ombor",
+    "address": "Manzil"
+  },
+  "receipts": {
+    "title": "Mahsulot qabul qilish",
+    "lead": "Qabul hujjatlari: sana, xodim, yetkazib beruvchi, roʻyxat.",
+    "id": "№",
+    "date": "Sana",
+    "employee": "Xodim",
+    "supplier": "Yetkazib beruvchi"
+  },
+  "orders": {
+    "title": "Yuklash",
+    "lead": "Buyurtmalar: Yaratilgan, Yigʻilmoqda, Yuborilgan.",
+    "id": "№",
+    "date": "Sana",
+    "status": "Holat",
+    "client": "Mijoz"
+  },
+  "stock": {
+    "title": "Qoldiqlar",
+    "lead": "Hujayralar boʻyicha joriy qoldiqlar.",
+    "product": "Mahsulot (SKU)",
+    "cell": "Hujayra",
+    "quantity": "Miqdor"
+  },
+  "transfers": {
+    "title": "Koʻchirish",
+    "lead": "Hujayralar orasida koʻchirish.",
+    "id": "№",
+    "date": "Sana",
+    "employee": "Xodim"
+  },
+  "inventory": {
+    "title": "Inventarizatsiya",
+    "lead": "Qayta hisoblash, tizim bilan solishtirish, farq aktlari.",
+    "id": "№",
+    "date": "Sana",
+    "warehouse": "Ombor",
+    "completed": "Tugallangan"
+  },
+  "reports": {
+    "title": "Hisobotlar va tarix",
+    "lead": "Harakat, qabul, yuklash, mashhur mahsulotlar, tanqislik.",
+    "shortage": "Tanqislik (min. qoldiqdan past)",
+    "popular": "Mashhur mahsulotlar (yuklashlar boʻyicha)",
+    "minQty": "Minimum",
+    "current": "Joriy",
+    "shipped": "Yuborilgan"
+  },
+  "users": {
+    "title": "Foydalanuvchilar",
+    "lead": "Hisoblar, rollar (Administrator, Menejer, Omborchi).",
+    "username": "Login",
+    "fullName": "F.I.O.",
+    "role": "Rol"
+  },
+  "lang": {
+    "ru": "Русский",
+    "uz": "Oʻzbek",
+    "en": "English"
+  }
+}

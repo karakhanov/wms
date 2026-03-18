@@ -1,0 +1,116 @@
+.page {
+  max-width: 1200px;
+}
+
+.h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.lead {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.h2 {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.pageHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.btnAdd {
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: 6px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.btnAdd:hover {
+  opacity: 0.9;
+  text-decoration: none;
+  color: var(--bg);
+}
+
+.thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.thumbPlaceholder {
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  background: var(--surface);
+  border-radius: 4px;
+  text-align: center;
+  line-height: 40px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.btnSm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  margin-right: 0.35rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btnSm:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btnSm.btnDanger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.tableWrap {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.table th {
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}

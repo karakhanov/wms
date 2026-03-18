@@ -1,0 +1,36 @@
+## Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.pwc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+ENV/
+
+## Django
+*.log
+db.sqlite3
+staticfiles/
+media/
+
+## Node / React
+node_modules/
+dist/
+.vite/
+
+## OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+## Secrets
+.env
+.env.*
