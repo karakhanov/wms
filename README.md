@@ -115,7 +115,8 @@ wms/
 │   └── notifications/   # Уведомления
 ├── frontend/            # React SPA (Vite)
 ├── docs/                # Доп. документация (архитектура, BPMN, UI)
-└── requirements.txt
+├── requirements.txt
+└── requirements-dev.txt # pytest + pytest-django (опционально)
 ```
 
 ---
@@ -151,19 +152,48 @@ wms/
 
 ---
 
-## Проверка проекта (перед коммитом или релизом)
+## Тесты
+
+### Backend (pytest)
+
+Установка зависимостей для тестов:
 
 ```bash
-# Backend
+pip install -r requirements-dev.txt
+# или: py -m pip install -r requirements-dev.txt
+```
+
+Запуск (из каталога `backend`, используется SQLite in-memory — `config/settings_test.py`):
+
+```bash
+cd backend
+py -m pytest
+# или: pytest
+```
+
+Smoke-тесты: неавторизованный доступ к API, список товаров с авторизацией, отказ при неверном пароле JWT.
+
+### Frontend (Vitest)
+
+```bash
+cd frontend
+npm install
+npm run test
+npm run test:watch   # интерактивно
+```
+
+Пример: unit-тесты для `frontend/src/utils/listResponse.js`.
+
+### Быстрая проверка без pytest
+
+```bash
 cd backend
 python manage.py check
 python manage.py makemigrations --check
 python manage.py test
-
-# Frontend
-cd ../frontend
-npm install
-npm run build
 ```
 
-Автотестов в репозитории пока нет (`python manage.py test` выполняет проверку конфигурации); сборка Vite и `manage.py check` подтверждают отсутствие синтаксических и системных ошибок.
+```bash
+cd frontend
+npm run build
+```
