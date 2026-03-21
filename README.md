@@ -92,6 +92,8 @@ npm run dev
 
 Фронтенд: http://localhost:3000 (прокси к API на :8000).
 
+Оформление UI (сейчас: **glass**, вариант D): см. `docs/FRONTEND_UI_OPTIONS.md`.
+
 ---
 
 ## Структура проекта
@@ -99,33 +101,69 @@ npm run dev
 ```
 wms/
 ├── backend/
-│   ├── config/          # Настройки Django
-│   ├── users/           # Пользователи, роли, журнал
-│   ├── products/        # Товары, категории
+│   ├── config/          # Настройки Django, пагинация API
+│   ├── users/           # Пользователи, роли, журнал действий
+│   ├── products/        # Товары, категории, единицы измерения
 │   ├── warehouse/       # Склад, зоны, стеллажи, ячейки
+│   ├── construction/  # Объекты строительства
 │   ├── receipts/        # Приёмка, поставщики
-│   ├── orders/          # Заказы (отгрузка)
+│   ├── orders/          # Заказы, заявки, накладные на отпуск (issue notes)
 │   ├── stock/           # Остатки, минимальные уровни
 │   ├── transfers/       # Перемещения
 │   ├── inventory/       # Инвентаризация
-│   └── reports/         # Отчёты (движение, нехватка, популярные)
-├── frontend/            # React SPA
+│   ├── reports/         # Отчёты (движение, нехватка, популярные)
+│   └── notifications/   # Уведомления
+├── frontend/            # React SPA (Vite)
+├── docs/                # Доп. документация (архитектура, BPMN, UI)
 └── requirements.txt
 ```
+
+---
+
+## Пагинация списков (API и UI)
+
+Для сущностей с постраничным выводом в API используются параметры **`page`** и **`page_size`**.
+
+- По умолчанию **`page_size = 10`** (см. `backend/config/pagination.py` и `REST_FRAMEWORK` в `backend/config/settings.py`).
+- Максимум **`page_size = 500`** (большие выборки и экспорт в Excel/CSV на фронте).
+
+В интерфейсе таблиц по умолчанию также показывается **10 строк**; размер страницы задаётся константой `DEFAULT_PAGE_SIZE` в `frontend/src/constants/pagination.js`.
 
 ---
 
 ## API (кратко)
 
 - `POST /api/auth/token/` — получение JWT (username, password)
-- `GET/POST /api/products/` — товары
+- `GET/POST /api/products/` — товары; `GET/POST/.../categories/`, `.../units/`
 - `GET/POST /api/warehouse/warehouses/`, `zones/`, `racks/`, `cells/`
+- `GET/POST /api/construction/objects/` — объекты строительства
 - `GET/POST /api/receipts/` — приёмки
 - `GET/POST/PATCH /api/orders/` — заказы; при смене статуса на «Отправлен» списание со склада
+- `GET/POST/.../api/orders/issue-notes/` — накладные на отпуск материала (согласование и т.д.)
 - `GET /api/stock/balances/`, `min-levels/`
 - `GET/POST /api/transfers/`
 - `GET/POST /api/inventory/`, `POST /api/inventory/{id}/apply/` — применить корректировку
 - `GET /api/reports/movement/`, `shortage/`, `popular/`
 - `GET/POST /api/auth/users/`, `roles/`, `action-log/`
+- `GET/PATCH /api/notifications/` — уведомления
 
 Все эндпоинты (кроме токена) требуют заголовок: `Authorization: Bearer <access_token>`.
+
+---
+
+## Проверка проекта (перед коммитом или релизом)
+
+```bash
+# Backend
+cd backend
+python manage.py check
+python manage.py makemigrations --check
+python manage.py test
+
+# Frontend
+cd ../frontend
+npm install
+npm run build
+```
+
+Автотестов в репозитории пока нет (`python manage.py test` выполняет проверку конфигурации); сборка Vite и `manage.py check` подтверждают отсутствие синтаксических и системных ошибок.

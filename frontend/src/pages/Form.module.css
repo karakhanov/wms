@@ -1,108 +1,320 @@
 .page {
-  max-width: 640px;
+  max-width: 680px;
+  padding: 1.6rem 1.85rem 2.1rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--glass-border-bright);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-heavy)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy)) saturate(1.35);
+  box-shadow: var(--glass-shadow);
 }
 
 .h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.35rem;
+  margin: 0 0 0.4rem;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .lead {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
   color: var(--muted);
   font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.1rem;
+}
+
+/* Встроенные формы на странице списка — не на всю ширину экрана */
+.formCompact {
+  max-width: min(100%, 26rem);
+  width: 100%;
+}
+
+/* форма внутри модального окна */
+.formModal {
+  gap: 0.75rem;
+  max-width: none;
+}
+
+/* Строка: select FK + кнопка «добавить связь» */
+.fkRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.fkRow .fkSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+.fkAddBtn {
+  flex-shrink: 0;
+  width: 2.4rem;
+  min-height: 2.45rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--accent-bright);
+  background: rgba(var(--accent-rgb), 0.08);
+  border: 1px solid rgba(var(--accent-rgb), 0.32);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.fkAddBtn:hover {
+  background: rgba(var(--accent-rgb), 0.14);
+  border-color: rgba(var(--accent-rgb), 0.45);
+}
+
+html[data-theme='light'] .fkAddBtn {
+  color: var(--accent);
+}
+
+.fkAddBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .row {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
 .row label {
-  font-size: 0.875rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--muted);
+  letter-spacing: 0.02em;
 }
 
 .input,
 .select,
 .textarea {
-  padding: 0.5rem 0.65rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.58rem 0.85rem;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  border-radius: var(--radius-md);
   color: var(--text);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+  /* тёмная тема: лёгкое «стекло», не сплошная серая плита */
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.select {
+  cursor: pointer;
+  appearance: auto;
 }
 
 .textarea {
-  min-height: 80px;
+  min-height: 96px;
   resize: vertical;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
 }
 
 .input:focus,
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.55);
+  box-shadow: var(--focus-ring);
+}
+
+/* Hide number input spinners in form fields */
+.input[type='number']::-webkit-outer-spin-button,
+.input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input[type='number'] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+/* Светлая тема: белое поле, тонкая рамка — без «тяжёлого» серого блока */
+html[data-theme='light'] .input,
+html[data-theme='light'] .select,
+html[data-theme='light'] .textarea {
+  background: #fff;
+  border: 1px solid rgba(0, 77, 64, 0.14);
+  color: var(--text);
+  box-shadow: inset 0 1px 2px rgba(0, 40, 35, 0.04);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+html[data-theme='light'] .input:hover,
+html[data-theme='light'] .select:hover,
+html[data-theme='light'] .textarea:hover {
+  border-color: rgba(0, 77, 64, 0.22);
+}
+
+html[data-theme='light'] .input:focus,
+html[data-theme='light'] .select:focus,
+html[data-theme='light'] .textarea:focus {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  box-shadow: var(--focus-ring);
 }
 
 .actions {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.5rem;
+  margin-top: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .btn {
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-weight: 500;
-  border: none;
+  padding: 0.48rem 0.92rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.84rem;
+  line-height: 1.15;
+  border: 1px solid transparent;
   cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background 0.14s ease,
+    border-color 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.08s ease;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .btnPrimary {
-  background: var(--accent);
-  color: var(--bg);
+  background: rgba(var(--accent-rgb), 0.18);
+  color: var(--accent-bright);
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.btnPrimary:hover {
+  background: rgba(var(--accent-rgb), 0.24);
+  border-color: rgba(var(--accent-rgb), 0.58);
+  color: #ccfff5;
 }
 
 .btnSecondary {
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--muted);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
+}
+
+.btnSecondary:hover {
+  color: var(--text);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme='light'] .btnSecondary {
+  background: #f8faf9;
+  color: #4b5563;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+}
+
+html[data-theme='light'] .btnSecondary:hover {
+  color: #1f2937;
+  border-color: rgba(0, 77, 64, 0.3);
+  background: rgba(0, 77, 64, 0.06);
+}
+
+html[data-theme='light'] .btnPrimary {
+  background: rgba(0, 148, 122, 0.14);
+  color: #0b5f4c;
+  border-color: rgba(0, 148, 122, 0.4);
+}
+
+html[data-theme='light'] .btnPrimary:hover {
+  background: rgba(0, 148, 122, 0.22);
+  color: #084c3d;
+  border-color: rgba(0, 148, 122, 0.54);
 }
 
 .btnDanger {
-  background: var(--danger);
-  color: white;
+  background: rgba(248, 81, 73, 0.16);
+  color: #ffb4b0;
+  border-color: rgba(248, 81, 73, 0.45);
+}
+
+.btnDanger:hover {
+  background: rgba(248, 81, 73, 0.24);
+  border-color: rgba(248, 81, 73, 0.62);
+}
+
+html[data-theme='light'] .btnDanger {
+  background: rgba(244, 63, 94, 0.14);
+  color: #9f1239;
+  border-color: rgba(244, 63, 94, 0.4);
+}
+
+html[data-theme='light'] .btnDanger:hover {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: rgba(244, 63, 94, 0.55);
 }
 
 .photoWrap {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
+  gap: 1.15rem;
 }
 
 .photoPreview {
   width: 120px;
   height: 120px;
   object-fit: contain;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+html[data-theme='light'] .photoPreview {
+  background: #f5f8f7;
+  border-color: rgba(0, 77, 64, 0.12);
 }
 
 .photoPlaceholder {
   width: 120px;
   height: 120px;
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -110,18 +322,36 @@
   font-size: 0.8rem;
 }
 
+html[data-theme='light'] .photoPlaceholder {
+  background: #fafcfb;
+  border-color: rgba(0, 77, 64, 0.15);
+}
+
 .checkRow {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
 }
 
 .checkRow input {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--accent);
 }
 
 .error {
-  color: var(--danger);
+  color: #ffb4b0;
   font-size: 0.875rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(248, 81, 73, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+}
+
+html[data-theme='light'] .error {
+  color: #b71c1c;
+  background: rgba(248, 81, 73, 0.08);
+  border-color: rgba(248, 81, 73, 0.2);
 }

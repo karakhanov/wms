@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../auth'
 import { auth as authApi } from '../api'
+import { BRAND_LOGO_URL } from '../siteConfig'
+import ThemeToggle from '../ThemeToggle'
+import LanguageSelect from '../components/LanguageSelect'
 import styles from './Login.module.css'
 
 export default function Login() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -30,20 +33,12 @@ export default function Login() {
   return (
     <div className={styles.page}>
       <div className={styles.langWrap}>
-        {['ru', 'uz', 'en'].map((lng) => (
-          <button
-            key={lng}
-            type="button"
-            className={styles.langBtn}
-            onClick={() => i18n.changeLanguage(lng)}
-          >
-            {t(`lang.${lng}`)}
-          </button>
-        ))}
+        <LanguageSelect />
+        <ThemeToggle />
       </div>
       <div className={styles.card}>
+        <img src={BRAND_LOGO_URL} alt={t('app.title')} className={styles.brandLogo} decoding="async" />
         <h1 className={styles.title}>{t('login.title')}</h1>
-        <p className={styles.subtitle}>{t('login.subtitle')}</p>
         <form onSubmit={handleSubmit} className={styles.form}>
           <input
             type="text"

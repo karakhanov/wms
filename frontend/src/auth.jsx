@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useCallback } from 'react'
+import { storageGet, storageSet, storageRemove } from './storage'
+import { auth as authApi } from './api'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [token, setTokenState] = useState(() => localStorage.getItem('wms_token'))
+  const [token, setTokenState] = useState(() => storageGet('wms_token'))
   const [user, setUser] = useState(() => {
     try {
-      const u = localStorage.getItem('wms_user')
+      const u = storageGet('wms_user')
       return u ? JSON.parse(u) : null
     } catch {
       return null
@@ -16,13 +18,20 @@ export function AuthProvider({ children }) {
   const setToken = useCallback((newToken, userData) => {
     setTokenState(newToken)
     setUser(userData)
-    if (newToken) localStorage.setItem('wms_token', newToken)
-    else localStorage.removeItem('wms_token')
-    if (userData) localStorage.setItem('wms_user', JSON.stringify(userData))
-    else localStorage.removeItem('wms_user')
+    if (newToken) storageSet('wms_token', newToken)
+    else storageRemove('wms_token')
+    if (userData) storageSet('wms_user', JSON.stringify(userData))
+    else storageRemove('wms_user')
   }, [])
 
-  const logout = useCallback(() => setToken(null, null), [setToken])
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout()
+    } catch {
+      // noop: local logout still must complete
+    }
+    setToken(null, null)
+  }, [setToken])
 
   return (
     <AuthContext.Provider value={{ token, user, setToken, logout }}>

@@ -1,43 +1,198 @@
-:root {
-  --bg: #0f1419;
-  --surface: #1a2332;
-  --border: #2d3a4f;
-  --text: #e6edf3;
-  --muted: #8b949e;
-  --accent: #58a6ff;
+/* === Тёмная тема (по умолчанию) === */
+:root,
+html[data-theme='dark'] {
+  color-scheme: dark;
+  --brand-deep: #004d40;
+  --bg: #060908;
+  --bg-elevated: rgba(12, 18, 18, 0.75);
+  --surface: rgba(16, 26, 26, 0.55);
+  --surface-hover: rgba(24, 38, 36, 0.65);
+  --border: rgba(100, 150, 140, 0.2);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --text: #eef4f2;
+  --muted: #8fa8a3;
+  --accent: #3dccb3;
+  --accent-bright: #9cf0e4;
+  --accent-rgb: 61, 204, 179;
+  --accent-dim: rgba(var(--accent-rgb), 0.16);
   --success: #3fb950;
-  --warning: #d29922;
+  --warning: #d4a017;
   --danger: #f85149;
-  --font: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --glass-bg: rgba(14, 22, 22, 0.52);
+  --glass-bg-strong: rgba(18, 30, 28, 0.68);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-bright: rgba(var(--accent-rgb), 0.28);
+  --glass-blur: 18px;
+  --glass-blur-heavy: 28px;
+  --glass-shadow: 0 8px 40px rgba(0, 0, 0, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  --navbar-bg: rgba(10, 16, 15, 0.72);
+  --navbar-border: rgba(255, 255, 255, 0.08);
+  --logo-filter: drop-shadow(0 2px 12px rgba(0, 0, 0, 0.35));
+
+  --body-gradient:
+    radial-gradient(ellipse 100% 70% at 85% 0%, rgba(0, 100, 88, 0.28), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 10% 90%, rgba(0, 77, 64, 0.2), transparent 50%),
+    radial-gradient(ellipse 55% 45% at 50% 100%, rgba(30, 120, 105, 0.12), transparent 45%),
+    linear-gradient(180deg, #0a100e 0%, #050807 100%);
+
+  --login-page-gradient:
+    radial-gradient(ellipse 90% 70% at 50% -25%, rgba(0, 120, 100, 0.28), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(0, 90, 78, 0.2), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(50, 160, 140, 0.12), transparent 45%);
+
+  --font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 48px rgba(0, 0, 0, 0.5);
+  --focus-ring: 0 0 0 3px rgba(var(--accent-rgb), 0.28);
+
+  /* Страница входа: поля ввода (не «серые пятна» на светлой карточке) */
+  --login-input-bg: rgba(255, 255, 255, 0.07);
+  --login-input-border: rgba(255, 255, 255, 0.14);
+  --login-input-border-hover: rgba(255, 255, 255, 0.2);
+  --login-input-placeholder: rgba(165, 185, 178, 0.85);
+  --login-input-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
+/* === Светлая тема === */
+html[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef2f0;
+  --bg-elevated: rgba(255, 255, 255, 0.92);
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-hover: rgba(240, 248, 246, 0.95);
+  --border: rgba(0, 77, 64, 0.12);
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --text: #0f1f1c;
+  --muted: #5a6f6a;
+  --accent: #0a6b5c;
+  --accent-bright: #0d8a78;
+  --accent-rgb: 10, 107, 92;
+  --accent-dim: rgba(var(--accent-rgb), 0.12);
+  --success: #2e7d32;
+  --warning: #b78100;
+  --danger: #c62828;
+
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-bg-strong: rgba(255, 255, 255, 0.92);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-border-bright: rgba(var(--accent-rgb), 0.22);
+  --glass-shadow: 0 4px 24px rgba(0, 60, 50, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  --navbar-bg: rgba(255, 255, 255, 0.82);
+  --navbar-border: rgba(0, 0, 0, 0.08);
+  --logo-filter: none;
+
+  --body-gradient:
+    radial-gradient(ellipse 100% 70% at 85% 0%, rgba(0, 120, 100, 0.1), transparent 55%),
+    radial-gradient(ellipse 80% 50% at 10% 90%, rgba(0, 90, 78, 0.06), transparent 50%),
+    radial-gradient(ellipse 55% 45% at 50% 100%, rgba(40, 140, 120, 0.05), transparent 45%),
+    linear-gradient(180deg, #f5f9f7 0%, #e8f0ed 100%);
+
+  --login-page-gradient:
+    radial-gradient(ellipse 90% 70% at 50% -25%, rgba(0, 100, 85, 0.12), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 100%, rgba(0, 80, 70, 0.08), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 80%, rgba(40, 130, 110, 0.07), transparent 45%);
+
+  --shadow-sm: 0 2px 8px rgba(0, 40, 35, 0.06);
+  --shadow-md: 0 8px 32px rgba(0, 50, 45, 0.1);
+  --focus-ring: 0 0 0 3px rgba(var(--accent-rgb), 0.22);
+
+  --login-input-bg: #ffffff;
+  --login-input-border: rgba(10, 107, 92, 0.16);
+  --login-input-border-hover: rgba(10, 107, 92, 0.26);
+  --login-input-placeholder: rgba(90, 111, 106, 0.5);
+  --login-input-shadow:
+    inset 0 1px 1px rgba(0, 45, 40, 0.04),
+    0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 * {
   box-sizing: border-box;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   margin: 0;
   font-family: var(--font);
-  background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
+  line-height: 1.55;
   min-height: 100vh;
+  background-color: var(--bg);
+  background-image: var(--body-gradient);
+  background-attachment: fixed;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root,
+  html[data-theme='dark'] {
+    --glass-bg: rgba(18, 28, 26, 0.92);
+    --glass-bg-strong: rgba(22, 34, 32, 0.94);
+    --surface: rgba(22, 34, 32, 0.88);
+  }
+
+  html[data-theme='light'] {
+    --glass-bg: rgba(255, 255, 255, 0.96);
+    --glass-bg-strong: #fff;
+    --surface: rgba(255, 255, 255, 0.95);
+  }
+}
+
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
 }
 
 a {
   color: var(--accent);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
 
 a:hover {
+  color: var(--accent-bright);
   text-decoration: underline;
 }
 
 button {
   font-family: inherit;
   cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
 }
 
-input, select, textarea {
+button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+input,
+select,
+textarea {
   font-family: inherit;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: var(--accent);
 }

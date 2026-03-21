@@ -3,8 +3,9 @@ import { initReactI18next } from 'react-i18next'
 import ru from './locales/ru.json'
 import uz from './locales/uz.json'
 import en from './locales/en.json'
+import { storageGet, storageSet } from './storage'
 
-const saved = localStorage.getItem('wms_lang') || 'ru'
+const saved = storageGet('wms_lang', 'ru') || 'ru'
 
 i18n
   .use(initReactI18next)
@@ -19,10 +20,14 @@ i18n
     interpolation: {
       escapeValue: false,
     },
+    /* Иначе useTranslation() «зависает» в Suspense без <Suspense> — белый экран */
+    react: {
+      useSuspense: false,
+    },
   })
 
 i18n.on('languageChanged', (lng) => {
-  localStorage.setItem('wms_lang', lng)
+  storageSet('wms_lang', lng)
 })
 
 export default i18n

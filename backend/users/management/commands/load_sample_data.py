@@ -30,8 +30,10 @@ class Command(BaseCommand):
             admin = User.objects.filter(username="admin").first()
             if admin:
                 set_current_user(admin)
+            self._create_units()
             self._create_categories_and_products()
             self._create_warehouse()
+            self._create_construction_objects()
             self._create_suppliers()
             self._create_receipts_and_stock()
             self._create_orders()
@@ -47,14 +49,17 @@ class Command(BaseCommand):
 
     def _create_users(self):
         from users.models import Role
+        from construction.models import ConstructionObject
         role_admin, _ = Role.objects.get_or_create(name=Role.Name.ADMIN)
         role_manager, _ = Role.objects.get_or_create(name=Role.Name.MANAGER)
         role_sk, _ = Role.objects.get_or_create(name=Role.Name.STOREKEEPER)
+        role_foreman, _ = Role.objects.get_or_create(name=Role.Name.FOREMAN)
 
         users_data = [
             ("admin", "admin123", "Администратор Системы", role_admin),
             ("manager", "manager123", "Менеджер Иванов", role_manager),
             ("storekeeper", "sk123", "Кладовщик Петров", role_sk),
+            ("foreman", "foreman123", "Прораб Сидоров", role_foreman),
         ]
         for username, password, full_name, role in users_data:
             user, created = User.objects.get_or_create(
@@ -64,7 +69,11 @@ class Command(BaseCommand):
             if created:
                 user.set_password(password)
                 user.save()
-        self.stdout.write("  Пользователи: admin/admin123, manager/manager123, storekeeper/sk123")
+            if role.name == Role.Name.FOREMAN:
+                objs = list(ConstructionObject.objects.all()[:1])
+                if objs:
+                    user.assigned_objects.set(objs)
+        self.stdout.write("  Пользователи: admin/admin123, manager/manager123, storekeeper/sk123, foreman/foreman123")
 
     def _create_categories_and_products(self):
         from products.models import Category, Product
@@ -87,6 +96,18 @@ class Command(BaseCommand):
                 defaults={"name": name, "barcode": barcode, "category": category, "unit": unit, "amount": amount},
             )
         self.stdout.write("  Категории и товары: ok")
+
+    def _create_units(self):
+        from products.models import Unit
+        units = [
+            ("шт", "Штука", True),
+            ("пачка", "Пачка", True),
+            ("кг", "Килограмм", True),
+            ("упак", "Упаковка", True),
+        ]
+        for symbol, name, is_active in units:
+            Unit.objects.get_or_create(symbol=symbol, defaults={"name": name, "is_active": is_active})
+        self.stdout.write("  Единицы измерения: ok")
 
     def _create_warehouse(self):
         from warehouse.models import Warehouse, Zone, Rack, Cell
@@ -112,6 +133,19 @@ class Command(BaseCommand):
         ]:
             Supplier.objects.get_or_create(name=name, defaults={"inn": inn, "contact": contact})
         self.stdout.write("  Поставщики: ok")
+
+    def _create_construction_objects(self):
+        from construction.models import ConstructionObject
+
+        for name, code, address in [
+            ("ЖК Башня 1", "OBJ-001", "г. Ташкент, ул. Бунёдкор, 10"),
+            ("Бизнес-центр Atlas", "OBJ-002", "г. Ташкент, Мирзо-Улугбекский р-н"),
+        ]:
+            ConstructionObject.objects.get_or_create(
+                name=name,
+                defaults={"code": code, "address": address, "is_active": True},
+            )
+        self.stdout.write("  Строительные объекты: ok")
 
     def _create_receipts_and_stock(self):
         from users.models import Role
@@ -161,7 +195,8 @@ class Command(BaseCommand):
     def _create_orders(self):
         from users.models import Role
         from products.models import Product
-        from orders.models import Order, OrderItem
+        from orders.models import Order, OrderItem, MaterialRequest, MaterialRequestItem
+        from construction.models import ConstructionObject
         from stock.models import StockBalance
 
         user = User.objects.filter(role__name=Role.Name.MANAGER).first() or User.objects.first()
@@ -198,6 +233,18 @@ class Command(BaseCommand):
                 rem -= take
 
         self.stdout.write("  Заказы: ok")
+
+        obj = ConstructionObject.objects.first()
+        if obj and not MaterialRequest.objects.exists():
+            mr = MaterialRequest.objects.create(
+                construction_object=obj,
+                object_name=obj.name,
+                work_type="Электромонтаж",
+                status=MaterialRequest.Status.SUBMITTED,
+                comment="Тестовая заявка прораба",
+            )
+            MaterialRequestItem.objects.create(request=mr, product=products[0], quantity=2)
+            self.stdout.write("  Заявки на материалы: ok")
 
     def _create_transfer(self):
         from users.models import Role

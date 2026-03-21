@@ -1,0 +1,241 @@
+.itemsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.itemCard {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.7rem;
+}
+
+.itemGrid {
+  display: grid;
+  grid-template-columns: 1.2fr 1.4fr 1fr 1fr auto;
+  gap: 0.65rem;
+  align-items: end;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fieldLabel {
+  font-size: 0.76rem;
+  color: var(--muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.fieldActions {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+}
+
+.itemComment {
+  margin-top: 0.55rem;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.shortageRow {
+  background: rgba(255, 0, 0, 0.2);
+  position: relative;
+}
+
+.shortageRow:hover {
+  background: rgba(255, 0, 0, 0.3);
+}
+
+.productsCell {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+
+.productsTooltipItem {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.36rem 0.46rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.productsTooltipTitle {
+  font-weight: 700;
+  margin-bottom: 0.28rem;
+  color: #f2f6ff;
+}
+
+.productsTooltipDanger {
+  color: #ff9e9e;
+  font-weight: 700;
+}
+
+.tooltipHead {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #f6f8ff;
+  margin-bottom: 0.15rem;
+}
+
+.productsTooltipRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+
+.productsTooltipKey {
+  color: #aeb9d3;
+}
+
+.productsTooltipVal {
+  font-weight: 700;
+  color: #c8ffe9;
+}
+
+.productsTooltipWarehouses {
+  color: #d4deef;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  border-top: 1px dashed rgba(255, 255, 255, 0.14);
+  padding-top: 0.25rem;
+}
+
+.rowShortageAnchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.floatingTooltip {
+  position: fixed;
+  z-index: 9999;
+  min-width: 340px;
+  max-width: min(760px, 84vw);
+  max-height: min(320px, 54vh);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  padding: 0.62rem 0.68rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(14, 18, 28, 0.98) 0%, rgba(8, 11, 18, 0.98) 100%);
+  color: #e8edf7;
+  font-size: 0.74rem;
+  line-height: 1.34;
+  box-shadow:
+    0 16px 34px rgba(0, 0, 0, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  pointer-events: none;
+}
+
+.floatingTooltipText {
+  white-space: pre-line;
+  color: #f1d2d0;
+}
+
+.floatingTooltipProducts {
+  border-color: rgba(99, 179, 255, 0.35);
+}
+
+.floatingTooltipShortage {
+  border-color: rgba(255, 105, 105, 0.45);
+}
+
+.sortableHeader {
+  cursor: pointer;
+  user-select: none;
+}
+
+.detailsWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.detailsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.detailsComment {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.65rem 0.75rem;
+}
+
+.detailItemsTableWrap {
+  overflow: visible;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+}
+
+.stockSection {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 0.7rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stockCards {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.stockCard {
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.stockCardShortage {
+  border-color: rgba(255, 0, 0, 0.65);
+  background: rgba(255, 0, 0, 0.12);
+}
+
+.stockCardTitle {
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.stockLine {
+  font-size: 0.9rem;
+}
+
+.stockDanger {
+  color: #ff4d4f;
+}
+
+.stockWarehouses {
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 920px) {
+  .itemGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .fieldActions {
+    justify-content: flex-start;
+  }
+
+  .detailsGrid {
+    grid-template-columns: 1fr;
+  }
+}

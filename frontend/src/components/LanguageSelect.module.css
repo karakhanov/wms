@@ -1,0 +1,75 @@
+.wrap {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    160deg,
+    rgba(var(--accent-rgb), 0.1) 0%,
+    rgba(255, 255, 255, 0.04) 45%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+  border: 1px solid rgba(var(--accent-rgb), 0.22);
+  box-shadow:
+    0 1px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+html[data-theme='light'] .wrap {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 252, 250, 0.99) 100%);
+  border-color: rgba(var(--accent-rgb), 0.18);
+  box-shadow: 0 1px 4px rgba(0, 60, 50, 0.05);
+}
+
+.wrap:hover {
+  border-color: rgba(var(--accent-rgb), 0.42);
+  box-shadow:
+    0 2px 10px rgba(var(--accent-rgb), 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.wrap:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    var(--focus-ring),
+    0 1px 8px rgba(var(--accent-rgb), 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.select {
+  /* уже по ширине (короткие подписи RU/UZ/EN), комфортно по высоте */
+  padding: 0.48rem 1.05rem 0.48rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  width: max-content;
+  min-width: 0;
+  max-width: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%238fa8a3' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.25rem center;
+}
+
+html[data-theme='light'] .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235a6f6a' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.select:focus {
+  outline: none;
+}
+
+.select option {
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: 500;
+  padding: 0.25rem;
+}

@@ -3,7 +3,7 @@ from users.models import Role
 
 
 class Command(BaseCommand):
-    help = "Создать роли: Администратор, Менеджер, Кладовщик"
+    help = "Создать роли: Администратор, Менеджер, Кладовщик, Прораб"
 
     def handle(self, *args, **options):
         for value, label in Role.Name.choices:

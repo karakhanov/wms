@@ -1,8 +1,10 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import SearchFilter, OrderingFilter
 from users.mixins import SetAuditUserMixin
+from users.permissions import AdminStorekeeper
 from .models import Inventory, InventoryItem, InventoryAdjustment
 from .serializers import InventorySerializer, InventoryCreateSerializer
 from stock.models import StockBalance
@@ -10,9 +12,12 @@ from stock.models import StockBalance
 
 class InventoryViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
     queryset = Inventory.objects.all().select_related("created_by", "warehouse").prefetch_related("items__product", "items__cell")
-    permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend]
+    permission_classes = [AdminStorekeeper]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ("warehouse", "is_completed", "created_at")
+    search_fields = ("comment", "warehouse__name", "created_by__username")
+    ordering_fields = ("id", "created_at", "is_completed")
+    ordering = ("-created_at",)
 
     def get_serializer_class(self):
         if self.action == "create":

@@ -6,6 +6,20 @@ from django.db import models
 from users.models import AuditModel
 
 
+class Unit(AuditModel):
+    """Справочник единиц измерения (для выпадающего списка в UI)."""
+    symbol = models.CharField("Символ", max_length=20, unique=True, db_index=True)
+    name = models.CharField("Название", max_length=255)
+    is_active = models.BooleanField("Активна", default=True)
+
+    class Meta:
+        verbose_name = "Единица измерения"
+        verbose_name_plural = "Единицы измерения"
+
+    def __str__(self):
+        return f"{self.name} ({self.symbol})"
+
+
 class Category(AuditModel):
     """Категория номенклатуры."""
     name = models.CharField("Название", max_length=255)

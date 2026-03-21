@@ -19,6 +19,16 @@ class ReceiptItemSerializer(serializers.ModelSerializer):
         fields = ("id", "product", "product_name", "product_sku", "cell", "cell_name", "quantity")
 
 
+class ReceiptListSerializer(serializers.ModelSerializer):
+    """Список приёмок без строк — для дашборда и таблиц."""
+    created_by_username = serializers.CharField(source="created_by.username", read_only=True)
+    supplier_name = serializers.CharField(source="supplier.name", read_only=True)
+
+    class Meta:
+        model = Receipt
+        fields = ("id", "created_at", "created_by_username", "supplier_name", "comment")
+
+
 class ReceiptSerializer(serializers.ModelSerializer):
     items = ReceiptItemSerializer(many=True, read_only=True)
     created_by_username = serializers.CharField(source="created_by.username", read_only=True)

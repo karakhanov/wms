@@ -50,11 +50,24 @@ class Role(AuditModel):
         ADMIN = "admin", "Администратор"
         MANAGER = "manager", "Менеджер"
         STOREKEEPER = "storekeeper", "Кладовщик"
+        FOREMAN = "foreman", "Прораб"
 
-    name = models.CharField(max_length=20, choices=Name.choices, unique=True)
+    name = models.CharField(max_length=50, unique=True)
 
     def __str__(self):
-        return self.get_name_display()
+        return self.name
+
+
+class RolePolicyOverride(AuditModel):
+    role_name = models.CharField(max_length=50, db_index=True)
+    resource = models.CharField(max_length=64, db_index=True)
+    can_read = models.BooleanField(default=False)
+    can_write = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Переопределение прав роли"
+        verbose_name_plural = "Переопределения прав ролей"
+        unique_together = ("role_name", "resource")
 
 
 class User(AbstractUser):
@@ -63,6 +76,12 @@ class User(AbstractUser):
     """
     role = models.ForeignKey(
         Role, on_delete=models.PROTECT, null=True, blank=True, related_name="users"
+    )
+    assigned_objects = models.ManyToManyField(
+        "construction.ConstructionObject",
+        blank=True,
+        related_name="assigned_users",
+        verbose_name="Закрепленные объекты",
     )
     full_name = models.CharField("ФИО", max_length=255, blank=True)
     created_at = models.DateTimeField("Создано", auto_now_add=True, null=True, blank=True)
@@ -103,6 +122,12 @@ class ActionLog(AuditModel):
     action = models.CharField(max_length=100)
     model_name = models.CharField(max_length=100, blank=True)
     object_id = models.CharField(max_length=50, blank=True)
+    page = models.CharField(max_length=120, blank=True, db_index=True)
+    method = models.CharField(max_length=10, blank=True, db_index=True)
+    status_code = models.PositiveSmallIntegerField(null=True, blank=True, db_index=True)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.TextField(blank=True)
+    device = models.CharField(max_length=64, blank=True, db_index=True)
     details = models.JSONField(default=dict, blank=True)
 
     class Meta:

@@ -1,0 +1,31 @@
+from django.conf import settings
+from django.db import models
+
+from users.models import AuditModel
+
+
+class Notification(AuditModel):
+    class Type(models.TextChoices):
+        ISSUE_NOTE_SUBMITTED = "issue_note_submitted", "Накладная отправлена"
+        ISSUE_NOTE_APPROVED = "issue_note_approved", "Накладная одобрена"
+        ISSUE_NOTE_REJECTED = "issue_note_rejected", "Накладная отклонена"
+
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications_received",
+        verbose_name="Получатель",
+    )
+    type = models.CharField(max_length=64, choices=Type.choices, db_index=True)
+    title = models.CharField(max_length=255)
+    message = models.TextField(blank=True)
+    payload = models.JSONField(default=dict, blank=True)
+    entity_type = models.CharField(max_length=64, blank=True, default="")
+    entity_id = models.PositiveBigIntegerField(null=True, blank=True, db_index=True)
+    is_read = models.BooleanField(default=False, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Уведомление"
+        verbose_name_plural = "Уведомления"
