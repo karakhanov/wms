@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from users.mixins import SetAuditUserMixin
-from users.permissions import ManagerStorekeeper
+from users.permissions import ManagerStorekeeper, ManagerStorekeeperProcurement
 from .models import Supplier, Receipt, ReceiptItem
 from .serializers import (
     SupplierSerializer,
@@ -15,7 +15,7 @@ from .serializers import (
 class SupplierViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializer
-    permission_classes = [ManagerStorekeeper]
+    permission_classes = [ManagerStorekeeperProcurement]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ("name", "inn", "contact")
     ordering_fields = ("id", "name", "created_at")

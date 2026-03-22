@@ -5,7 +5,9 @@
   },
   "layout": {
     "version": "Версия {{version}}",
-    "sidebarHint": "Корпоративный учёт склада Bashkent"
+    "sidebarHint": "Корпоративный учёт склада Bashkent",
+    "readyPickupTitle": "Накладные готовы к выдаче: {{count}}",
+    "readyPickupNavTitle": "Готовы к выдаче: {{count}} накл."
   },
   "nav": {
     "dashboard": "Дашборд",
@@ -326,6 +328,10 @@
     "noRemaining": "В заявке нет остатка к выдаче.",
     "createError": "Не удалось создать накладную.",
     "noAccess": "Недостаточно прав для просмотра накладных.",
+    "listLoadError": "Не удалось загрузить список накладных.",
+    "emptyList": "Накладных пока нет.",
+    "emptyFiltered": "Нет записей по текущим фильтрам. Сбросьте фильтр статуса, поиск или период.",
+    "foremanListHint": "Видны накладные, которые вы создали, а также по объектам, закреплённым за вами в профиле.",
     "categories": "Категории",
     "products": "Товары",
     "sender": "Ф.И.О отправителя",
@@ -340,12 +346,67 @@
     "shortageQty": "Не хватает",
     "hoverShortageTitle": "Ошибка: недостаточно остатков",
     "submittedStatusLabel": "На согласовании",
+    "statusAwaitingProcurement": "У снабжения",
+    "statusProcurementActive": "Закупка",
+    "statusAwaitCtrlPick": "Товар прибыл — назначить контролёра",
+    "statusAwaitingController": "Ожидает приёмку",
+    "statusAwaitingRelease": "Ожидает выдачу со склада",
+    "statusPicking": "Собирается",
+    "statusReadyPickup": "Готов к выдаче",
+    "statusReceivedForeman": "Прораб получил",
+    "sendToProcurement": "В снабжение",
+    "procurementNotesPrompt": "Комментарий для снабжения (нехватка и т.д.)",
+    "procurementProceed": "Взять в закупку",
+    "procurementDecline": "Отказ снабжения",
+    "goodsArrived": "Товар прибыл",
+    "controllerComplete": "Завершить приёмку",
+    "actualQty": "Факт",
+    "photoUrlsHint": "Ссылки на фото через запятую",
+    "photosCol": "Фото",
+    "startPicking": "Начать сборку",
+    "markReadyPickup": "Готов к выдаче",
+    "confirmReceived": "Получил",
+    "procurementNotesLabel": "Снабжение",
     "rejectCommentPrompt": "Укажите причину отказа",
     "rejectCommentRequired": "Причина отказа обязательна.",
     "rejectCommentLabel": "Причина отказа",
     "shortageFilterAll": "Нехватка: все",
     "shortageFilterWith": "Только с нехваткой",
-    "shortageFilterWithout": "Без нехватки"
+    "shortageFilterWithout": "Без нехватки",
+    "procurementDetailsTitle": "Данные закупки и доставки",
+    "procurementDetailsReadonly": "Закупка",
+    "procurementPurchaseDate": "Дата закупки",
+    "procurementAmount": "Сумма",
+    "procurementQtyNote": "Количество (комментарий)",
+    "procurementCounterparty": "Контрагент",
+    "procurementFillForm": "Заполните форму.",
+    "procurementSupplierSearchPlaceholder": "Поиск по названию, ИНН, контакту…",
+    "procurementNoSupplierMatch": "Нет поставщиков по запросу — уточните поиск или добавьте нового.",
+    "procurementNoSuppliersInDirectory": "В справочнике пока нет поставщиков — нажмите «Новый поставщик».",
+    "procurementSupplier": "Поставщик (справочник)",
+    "procurementSupplierPlaceholder": "— не выбран —",
+    "procurementAddSupplier": "Новый поставщик",
+    "procurementNewSupplierName": "Название поставщика",
+    "procurementSupplierNameRequired": "Укажите название поставщика.",
+    "procurementLinesTitle": "Что везут по накладной",
+    "procurementLinesPickHint": "Несколько видов товаров: отметьте, какие позиции закрывает эта поставка.",
+    "procurementLinesAutoHint": "Позиции для закупки выбраны автоматически (одна строка, один вид товара или нехватка по одному виду).",
+    "procurementLinesReadonly": "Позиции в поставке",
+    "procurementLineCount": "стр.",
+    "procurementVehicle": "Транспорт / машина",
+    "procurementDeliveryNotes": "Как везут, маршрут",
+    "procurementScanFile": "Скан документа",
+    "procurementScanLink": "Открыть скан",
+    "assignControllersTitle": "Контролёры на приёмку",
+    "assignControllersHint": "Отметьте одного или нескольких контролёров — им уйдёт уведомление.",
+    "assignControllersRequired": "Выберите хотя бы одного контролёра.",
+    "assignAndNotify": "Назначить и уведомить",
+    "rowQuickAssign": "Назначить",
+    "noControllers": "В системе нет пользователей с ролью контролёра.",
+    "inspectionCommentCol": "Комментарий приёмки",
+    "inspectionPhotosPick": "Фото",
+    "inspectionLineComment": "Комментарий",
+    "filesPicked": "файл(ов)"
   },
   "objects": {
     "title": "Строительные объекты",
@@ -377,7 +438,14 @@
     "types": {
       "issue_note_submitted": "Накладная отправлена",
       "issue_note_approved": "Накладная одобрена",
-      "issue_note_rejected": "Накладная отклонена"
+      "issue_note_rejected": "Накладная отклонена",
+      "issue_note_sent_procurement": "У снабжения",
+      "issue_note_procurement_declined": "Отказ снабжения",
+      "issue_note_goods_for_inspection": "Приёмка товара",
+      "issue_note_assign_controllers": "Назначьте контролёров",
+      "issue_note_inspection_done": "Приёмка завершена",
+      "issue_note_ready_pickup": "Готово к выдаче",
+      "issue_note_received_foreman": "Прораб получил"
     },
     "templates": {
       "issue_note_submitted": {
@@ -391,6 +459,34 @@
       "issue_note_rejected": {
         "title": "Накладная отклонена: {{number}}",
         "message": "Статус накладной {{number}} изменен на: отклонена."
+      },
+      "issue_note_sent_procurement": {
+        "title": "У снабжения: {{number}}",
+        "message": "Накладная {{number}} передана в снабжение."
+      },
+      "issue_note_procurement_declined": {
+        "title": "Отказ снабжения: {{number}}",
+        "message": "По накладной {{number}} снабжение не может обеспечить закупку."
+      },
+      "issue_note_goods_for_inspection": {
+        "title": "Приёмка: {{number}}",
+        "message": "Товар по накладной {{number}} ожидает проверку контролёра."
+      },
+      "issue_note_assign_controllers": {
+        "title": "Назначьте контролёров: {{number}}",
+        "message": "Товар по накладной {{number}} прибыл. Выберите контролёров для приёмки."
+      },
+      "issue_note_inspection_done": {
+        "title": "Приёмка завершена: {{number}}",
+        "message": "Контролёр завершил приёмку по накладной {{number}}."
+      },
+      "issue_note_ready_pickup": {
+        "title": "Готово к выдаче: {{number}}",
+        "message": "Накладная {{number}} собрана, можно забирать материалы."
+      },
+      "issue_note_received_foreman": {
+        "title": "Прораб получил: {{number}}",
+        "message": "По накладной {{number}} прораб подтвердил получение."
       }
     }
   },

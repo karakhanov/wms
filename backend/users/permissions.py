@@ -46,6 +46,13 @@ class ManagerStorekeeper(RolePermission):
     write_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER}
 
 
+class ManagerStorekeeperProcurement(RolePermission):
+    """Справочник поставщиков: склад + снабжение (выбор в накладной, быстрый ввод)."""
+
+    read_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT}
+    write_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT}
+
+
 class StorekeeperOnly(RolePermission):
     read_roles = {Role.Name.ADMIN, Role.Name.STOREKEEPER}
     write_roles = {Role.Name.ADMIN, Role.Name.STOREKEEPER}
@@ -57,17 +64,45 @@ class AdminStorekeeper(RolePermission):
 
 
 class AnyAuthenticatedRole(RolePermission):
-    read_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN}
-    write_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN}
+    read_roles = {
+        Role.Name.ADMIN,
+        Role.Name.MANAGER,
+        Role.Name.STOREKEEPER,
+        Role.Name.FOREMAN,
+        Role.Name.PROCUREMENT,
+        Role.Name.WAREHOUSE_CONTROLLER,
+    }
+    write_roles = {
+        Role.Name.ADMIN,
+        Role.Name.MANAGER,
+        Role.Name.STOREKEEPER,
+        Role.Name.FOREMAN,
+        Role.Name.PROCUREMENT,
+        Role.Name.WAREHOUSE_CONTROLLER,
+    }
 
 
 DEFAULT_ROLE_POLICY = {
     "products": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER],
     },
     "categories": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER],
     },
     "units": {
@@ -76,26 +111,38 @@ DEFAULT_ROLE_POLICY = {
     },
     "warehouse": {"read": [Role.Name.ADMIN, Role.Name.MANAGER], "write": [Role.Name.ADMIN, Role.Name.MANAGER]},
     "construction_objects": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER],
     },
     "zones": {"read": [Role.Name.ADMIN, Role.Name.MANAGER], "write": [Role.Name.ADMIN, Role.Name.MANAGER]},
     "racks": {"read": [Role.Name.ADMIN, Role.Name.MANAGER], "write": [Role.Name.ADMIN, Role.Name.MANAGER]},
     "cells": {"read": [Role.Name.ADMIN, Role.Name.MANAGER], "write": [Role.Name.ADMIN, Role.Name.MANAGER]},
     "suppliers": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
+        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT],
+        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT],
     },
     "receipts": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
+        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT],
+        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT],
     },
     "orders": {
         "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
     },
     "stock_balances": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER],
     },
     "min_stock_levels": {
@@ -108,68 +155,256 @@ DEFAULT_ROLE_POLICY = {
     "users": {"read": [Role.Name.ADMIN, Role.Name.MANAGER], "write": [Role.Name.ADMIN, Role.Name.MANAGER]},
     "user_admin_actions": {"read": [Role.Name.ADMIN], "write": [Role.Name.ADMIN]},
     "action_log": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER],
     },
     "material_requests": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
     },
     "issue_notes": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.FOREMAN,
+            Role.Name.STOREKEEPER,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "notifications": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_dashboard": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_products": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_categories": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_warehouse": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_objects": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.FOREMAN],
     },
     "sidebar_suppliers": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
     },
     "sidebar_receipts": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
     },
     "sidebar_orders": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+        ],
     },
     "sidebar_issueNotes": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_stock": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_transfers": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_inventory": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_reports": {
         "read": [Role.Name.ADMIN, Role.Name.MANAGER],
@@ -184,12 +419,40 @@ DEFAULT_ROLE_POLICY = {
         "write": [Role.Name.ADMIN],
     },
     "sidebar_notifications": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
     "sidebar_history": {
-        "read": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
-        "write": [Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.FOREMAN],
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
     },
 }
 

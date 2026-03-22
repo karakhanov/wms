@@ -5,7 +5,9 @@
   },
   "layout": {
     "version": "Version {{version}}",
-    "sidebarHint": "Corporate warehouse accounting for Bashkent"
+    "sidebarHint": "Corporate warehouse accounting for Bashkent",
+    "readyPickupTitle": "Issue notes ready for pickup: {{count}}",
+    "readyPickupNavTitle": "Ready for pickup: {{count}}"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -326,6 +328,10 @@
     "noRemaining": "No remaining quantity in the request.",
     "createError": "Failed to create issue note.",
     "noAccess": "You do not have access to issue notes.",
+    "listLoadError": "Could not load issue notes.",
+    "emptyList": "No issue notes yet.",
+    "emptyFiltered": "Nothing matches the current filters. Clear status, search, or date range.",
+    "foremanListHint": "You see issue notes you created and those for construction objects assigned to you in your profile.",
     "categories": "Categories",
     "products": "Products",
     "sender": "Sender full name",
@@ -340,12 +346,67 @@
     "shortageQty": "Shortage",
     "hoverShortageTitle": "Error: insufficient stock",
     "submittedStatusLabel": "Pending review",
+    "statusAwaitingProcurement": "With procurement",
+    "statusProcurementActive": "Purchasing",
+    "statusAwaitCtrlPick": "Goods arrived — assign controllers",
+    "statusAwaitingController": "Awaiting inspection",
+    "statusAwaitingRelease": "Awaiting warehouse release",
+    "statusPicking": "Picking",
+    "statusReadyPickup": "Ready for pickup",
+    "statusReceivedForeman": "Received by foreman",
+    "sendToProcurement": "Send to procurement",
+    "procurementNotesPrompt": "Comment for procurement (shortage, etc.)",
+    "procurementProceed": "Start purchasing",
+    "procurementDecline": "Procurement decline",
+    "goodsArrived": "Goods arrived",
+    "controllerComplete": "Complete inspection",
+    "actualQty": "Actual qty",
+    "photoUrlsHint": "Photo URLs, comma-separated",
+    "photosCol": "Photos",
+    "startPicking": "Start picking",
+    "markReadyPickup": "Mark ready",
+    "confirmReceived": "Mark received",
+    "procurementNotesLabel": "Procurement",
     "rejectCommentPrompt": "Enter rejection reason",
     "rejectCommentRequired": "Rejection reason is required.",
     "rejectCommentLabel": "Rejection reason",
     "shortageFilterAll": "Shortage: all",
     "shortageFilterWith": "Only with shortage",
-    "shortageFilterWithout": "Without shortage"
+    "shortageFilterWithout": "Without shortage",
+    "procurementDetailsTitle": "Purchase and delivery details",
+    "procurementDetailsReadonly": "Purchase",
+    "procurementPurchaseDate": "Purchase date",
+    "procurementAmount": "Amount",
+    "procurementQtyNote": "Quantity (note)",
+    "procurementCounterparty": "Counterparty",
+    "procurementFillForm": "Fill in the form.",
+    "procurementSupplierSearchPlaceholder": "Search by name, tax ID, contact…",
+    "procurementNoSupplierMatch": "No suppliers match — refine search or add a new one.",
+    "procurementNoSuppliersInDirectory": "No suppliers yet — use «New supplier».",
+    "procurementSupplier": "Supplier (directory)",
+    "procurementSupplierPlaceholder": "— not selected —",
+    "procurementAddSupplier": "New supplier",
+    "procurementNewSupplierName": "Supplier name",
+    "procurementSupplierNameRequired": "Enter the supplier name.",
+    "procurementLinesTitle": "Items covered by this delivery",
+    "procurementLinesPickHint": "Multiple product types: select which lines this shipment covers.",
+    "procurementLinesAutoHint": "Lines for procurement are selected automatically (single line, single product type, or shortage on one type only).",
+    "procurementLinesReadonly": "Lines in shipment",
+    "procurementLineCount": "lines",
+    "procurementVehicle": "Vehicle / transport",
+    "procurementDeliveryNotes": "Delivery / route",
+    "procurementScanFile": "Scan / document",
+    "procurementScanLink": "Open scan",
+    "assignControllersTitle": "Controllers for inspection",
+    "assignControllersHint": "Select one or more controllers — they will be notified.",
+    "assignControllersRequired": "Select at least one controller.",
+    "assignAndNotify": "Assign and notify",
+    "rowQuickAssign": "Assign",
+    "noControllers": "No users with controller role.",
+    "inspectionCommentCol": "Inspection comment",
+    "inspectionPhotosPick": "Photos",
+    "inspectionLineComment": "Comment",
+    "filesPicked": "file(s)"
   },
   "objects": {
     "title": "Construction Objects",
@@ -377,7 +438,14 @@
     "types": {
       "issue_note_submitted": "Issue note submitted",
       "issue_note_approved": "Issue note approved",
-      "issue_note_rejected": "Issue note rejected"
+      "issue_note_rejected": "Issue note rejected",
+      "issue_note_sent_procurement": "With procurement",
+      "issue_note_procurement_declined": "Procurement declined",
+      "issue_note_goods_for_inspection": "Goods for inspection",
+      "issue_note_assign_controllers": "Assign controllers",
+      "issue_note_inspection_done": "Inspection done",
+      "issue_note_ready_pickup": "Ready for pickup",
+      "issue_note_received_foreman": "Foreman received"
     },
     "templates": {
       "issue_note_submitted": {
@@ -391,6 +459,34 @@
       "issue_note_rejected": {
         "title": "Issue note rejected: {{number}}",
         "message": "Issue note {{number}} status changed to rejected."
+      },
+      "issue_note_sent_procurement": {
+        "title": "With procurement: {{number}}",
+        "message": "Issue note {{number}} was sent to procurement."
+      },
+      "issue_note_procurement_declined": {
+        "title": "Procurement declined: {{number}}",
+        "message": "Procurement cannot supply issue note {{number}}."
+      },
+      "issue_note_goods_for_inspection": {
+        "title": "Inspection: {{number}}",
+        "message": "Goods for issue note {{number}} await controller inspection."
+      },
+      "issue_note_assign_controllers": {
+        "title": "Assign controllers: {{number}}",
+        "message": "Goods for issue note {{number}} arrived. Choose controllers for inspection."
+      },
+      "issue_note_inspection_done": {
+        "title": "Inspection done: {{number}}",
+        "message": "Controller finished inspection for issue note {{number}}."
+      },
+      "issue_note_ready_pickup": {
+        "title": "Ready for pickup: {{number}}",
+        "message": "Issue note {{number}} is picked and ready."
+      },
+      "issue_note_received_foreman": {
+        "title": "Foreman received: {{number}}",
+        "message": "Foreman confirmed receipt for issue note {{number}}."
       }
     }
   },

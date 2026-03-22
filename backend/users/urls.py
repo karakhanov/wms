@@ -16,5 +16,6 @@ urlpatterns = [
     path("me/", views.current_user),
     path("permissions/", views.permissions_matrix),
     path("managers/", views.managers_list),
+    path("controllers/", views.controllers_list),
     path("", include(router.urls)),
 ]

@@ -1,9 +1,30 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { construction, orders as ordersApi, products, stock as stockApi, users as usersApi } from '../api'
+import {
+  construction,
+  orders as ordersApi,
+  products,
+  stock as stockApi,
+  suppliers as suppliersApi,
+  users as usersApi,
+} from '../api'
 import { useAuth } from '../auth'
-import { canApproveIssueNotes, canCreateIssueNotes, canViewIssueNotes } from '../permissions'
+import {
+  canApproveIssueNotes,
+  canControllerIssueNote,
+  canCreateIssueNotes,
+  canForemanConfirmIssueNote,
+  canForemanConfirmIssueReceipt,
+  canProcurementIssueNote,
+  canSendIssueNoteToProcurement,
+  canShowIssueNoteApproveButton,
+  canStorekeeperIssueNoteFlow,
+  canUserInspectIssueNote,
+  canViewIssueNotes,
+  canViewIssueNoteShortageHints,
+  isForeman,
+} from '../permissions'
 import Modal from '../components/Modal'
 import TableToolbar from '../components/TableToolbar'
 import SortHeader from '../components/SortHeader'
@@ -20,6 +41,59 @@ import tableStyles from './Table.module.css'
 import formStyles from './Form.module.css'
 import styles from './IssueNotes.module.css'
 
+function formatApiErrorDetail(data) {
+  if (!data || typeof data !== 'object') return ''
+  const d = data.detail
+  if (typeof d === 'string' && d.trim()) return d.trim()
+  if (Array.isArray(d)) {
+    const s = d
+      .map((x) => {
+        if (typeof x === 'string') return x
+        if (x && typeof x === 'object') return [x.string, x.message].filter(Boolean).join(' ') || ''
+        return String(x)
+      })
+      .filter(Boolean)
+      .join(' ')
+      .trim()
+    if (s) return s
+  }
+  const parts = []
+  for (const [k, v] of Object.entries(data)) {
+    if (k === 'detail') continue
+    if (typeof v === 'string' && v.trim()) parts.push(v.trim())
+    else if (Array.isArray(v)) {
+      for (const x of v) {
+        if (typeof x === 'string' && x.trim()) parts.push(x.trim())
+      }
+    }
+  }
+  return parts.join(' ').trim()
+}
+
+function formatSupplierComboLabel(s) {
+  if (!s) return ''
+  const base = (s.name || `#${s.id}`).trim()
+  return s.inn ? `${base} · ${s.inn}` : base
+}
+
+function computeDefaultProcurementItemIds(note, itemShortageByItemId) {
+  const items = note?.items || []
+  if (!items.length) return []
+  if (items.length === 1) return [items[0].id]
+  const pids = new Set(items.map((i) => Number(i.product)))
+  if (pids.size === 1) return items.map((i) => i.id)
+  const short = itemShortageByItemId || {}
+  const shortPids = new Set()
+  for (const it of items) {
+    if (it.id && short[String(it.id)]) shortPids.add(Number(it.product))
+  }
+  if (shortPids.size === 1) {
+    const pid = [...shortPids][0]
+    return items.filter((i) => Number(i.product) === pid).map((i) => i.id)
+  }
+  return null
+}
+
 export default function IssueNotes() {
   const fmtQty = (v) => {
     const n = Number(v || 0)
@@ -33,6 +107,12 @@ export default function IssueNotes() {
   const canView = canViewIssueNotes(user)
   const canCreate = canCreateIssueNotes(user)
   const canApprove = canApproveIssueNotes(user)
+  const canSendProcurement = canSendIssueNoteToProcurement(user)
+  const canProcurement = canProcurementIssueNote(user)
+  const canController = canControllerIssueNote(user)
+  const canStorekeeperFlow = canStorekeeperIssueNoteFlow(user)
+  const canForemanRole = canForemanConfirmIssueReceipt(user)
+  const canSeeShortageHints = canViewIssueNoteShortageHints(user)
   const [rows, setRows] = useState([])
   const [objects, setObjects] = useState([])
   const [categories, setCategories] = useState([])
@@ -67,6 +147,29 @@ export default function IssueNotes() {
     recipient_id: '',
     comment: '',
   })
+  const [items, setItems] = useState([{ category: '', product: '', quantity: '', comment: '' }])
+  const [controllerLines, setControllerLines] = useState([])
+  const [controllers, setControllers] = useState([])
+  const [assignControllerIds, setAssignControllerIds] = useState([])
+  const [procurementCommentModal, setProcurementCommentModal] = useState({ open: false, noteId: null, text: '' })
+  const [supplierRows, setSupplierRows] = useState([])
+  const [procurementItemIds, setProcurementItemIds] = useState([])
+  const [supplierQuickModal, setSupplierQuickModal] = useState({ open: false, name: '', inn: '', contact: '' })
+  const [supplierComboText, setSupplierComboText] = useState('')
+  const [supplierComboOpen, setSupplierComboOpen] = useState(false)
+  const supplierComboRef = useRef(null)
+  const [procurementForm, setProcurementForm] = useState({
+    procurement_purchase_date: '',
+    procurement_amount: '',
+    procurement_quantity_note: '',
+    procurement_supplier: '',
+    procurement_vehicle: '',
+    procurement_delivery_notes: '',
+    procurement_scan: null,
+  })
+  const [quickAssignModal, setQuickAssignModal] = useState({ open: false, note: null })
+  const [quickAssignIds, setQuickAssignIds] = useState([])
+
   const assignedObjectFallback = useMemo(() => {
     const ids = Array.isArray(user?.assigned_objects) ? user.assigned_objects : []
     const names = Array.isArray(user?.assigned_object_names) ? user.assigned_object_names : []
@@ -85,6 +188,21 @@ export default function IssueNotes() {
     return Array.from(seen.values())
   }, [categories, productRows])
 
+  const suppliersComboFiltered = useMemo(() => {
+    const q = supplierComboText.trim().toLowerCase()
+    const match = (s) => {
+      if (!q) return true
+      return [s.name, s.inn, s.contact].some((x) => String(x || '').toLowerCase().includes(q))
+    }
+    let list = supplierRows.filter(match)
+    const sel = procurementForm.procurement_supplier
+    if (sel) {
+      const cur = supplierRows.find((x) => String(x.id) === String(sel))
+      if (cur && !list.some((x) => x.id === cur.id)) list = [cur, ...list]
+    }
+    return list.slice(0, 120)
+  }, [supplierRows, supplierComboText, procurementForm.procurement_supplier])
+
   const load = useCallback(() => {
     setLoading(true)
     Promise.allSettled([
@@ -93,15 +211,34 @@ export default function IssueNotes() {
       products.categories({ page_size: 500 }),
       products.list({ page_size: 500 }),
       usersApi.managers(),
+      usersApi.controllers(),
+      suppliersApi.list({ page_size: 500 }),
       ordersApi.issueNoteNextNumber(),
     ])
-      .then(([inRes, objRes, catRes, productRes, managersRes, nextNumRes]) => {
-        setRows(inRes.status === 'fulfilled' ? normalizeListResponse(inRes.value).results || [] : [])
+      .then(([inRes, objRes, catRes, productRes, managersRes, controllersRes, supRes, nextNumRes]) => {
+        if (inRes.status === 'rejected') {
+          const d = inRes.reason?.response?.data
+          const detail = d?.detail
+          const msg =
+            typeof detail === 'string'
+              ? detail
+              : Array.isArray(detail)
+                ? detail.map((x) => (typeof x === 'string' ? x : x?.message || String(x))).join(' ')
+                : t('issueNotes.listLoadError')
+          setError(msg)
+          setRows([])
+        } else {
+          setRows(normalizeListResponse(inRes.value).results || [])
+        }
         setObjects(objRes.status === 'fulfilled' ? normalizeListResponse(objRes.value).results || [] : [])
         setCategories(catRes.status === 'fulfilled' ? normalizeListResponse(catRes.value).results || [] : [])
         setProductRows(productRes.status === 'fulfilled' ? normalizeListResponse(productRes.value).results || [] : [])
         const mgrs = managersRes.status === 'fulfilled' ? managersRes.value || [] : []
         setManagers(mgrs)
+        setControllers(controllersRes.status === 'fulfilled' ? controllersRes.value || [] : [])
+        const supList = supRes.status === 'fulfilled' ? supRes.value : null
+        const supNorm = supList ? normalizeListResponse(supList) : { results: [] }
+        setSupplierRows(supNorm.results || [])
         setAutoNumber(nextNumRes.status === 'fulfilled' ? (nextNumRes.value?.number || '') : '')
         setForm((prev) => ({
           ...prev,
@@ -109,14 +246,53 @@ export default function IssueNotes() {
         }))
       })
       .catch(() => setRows([]))
-      .finally(() => setLoading(false))
-  }, [])
+      .finally(() => {
+        setLoading(false)
+        try {
+          window.dispatchEvent(new CustomEvent('issue-notes:changed'))
+        } catch {
+          /* ignore */
+        }
+      })
+  }, [t])
 
   useEffect(() => {
     load()
   }, [load])
 
   useEffect(() => {
+    const s = searchParams.get('status')
+    if (s) setStatusFilter(s)
+  }, [searchParams])
+
+  useEffect(() => {
+    if (!detailsOpen) {
+      setSupplierComboText('')
+      setSupplierComboOpen(false)
+    }
+  }, [detailsOpen])
+
+  useEffect(() => {
+    if (!supplierComboOpen) return
+    const onDocDown = (e) => {
+      if (supplierComboRef.current && !supplierComboRef.current.contains(e.target)) {
+        setSupplierComboOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocDown)
+    return () => document.removeEventListener('mousedown', onDocDown)
+  }, [supplierComboOpen])
+
+  useEffect(() => {
+    if (!canSeeShortageHints) setShortageFilter('')
+  }, [canSeeShortageHints])
+
+  useEffect(() => {
+    if (!canSeeShortageHints) {
+      setNoteShortageById({})
+      setNoteHoverInfoById({})
+      return () => {}
+    }
     let alive = true
     const calculateShortages = async () => {
       const rowsWithItems = rows.filter((n) => (n?.items || []).length > 0)
@@ -190,9 +366,108 @@ export default function IssueNotes() {
     return () => {
       alive = false
     }
-  }, [rows])
+  }, [rows, canSeeShortageHints, t])
 
-  const [items, setItems] = useState([{ category: '', product: '', quantity: '', comment: '' }])
+  const controllerItemSig =
+    selectedNote?.status === 'awaiting_controller' && selectedNote?.items?.length
+      ? selectedNote.items.map((i) => i.id).join(',')
+      : ''
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedNote?.items?.length) {
+      setControllerLines([])
+      return
+    }
+    if (selectedNote.status !== 'awaiting_controller') {
+      setControllerLines([])
+      return
+    }
+    if (!canUserInspectIssueNote(user, selectedNote)) {
+      setControllerLines([])
+      return
+    }
+    setControllerLines(
+      selectedNote.items.map((it) => ({
+        item_id: it.id,
+        actualQty: String(it.actual_quantity != null ? it.actual_quantity : it.quantity ?? ''),
+        inspectionComment: String(it.inspection_comment || ''),
+        photoFiles: [],
+      }))
+    )
+  }, [
+    detailsOpen,
+    selectedNote?.id,
+    selectedNote?.status,
+    selectedNote?.inspection_invited_user_ids,
+    controllerItemSig,
+    user,
+  ])
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedNote) {
+      setAssignControllerIds([])
+      return
+    }
+    if (selectedNote.status === 'await_ctrl_pick') {
+      const ids = selectedNote.inspection_invited_user_ids
+      setAssignControllerIds(Array.isArray(ids) ? ids.map((x) => Number(x)) : [])
+      return
+    }
+    setAssignControllerIds([])
+  }, [detailsOpen, selectedNote?.id, selectedNote?.status, selectedNote?.inspection_invited_user_ids])
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedNote) return
+    const d = selectedNote.procurement_purchase_date
+    const sid =
+      selectedNote.procurement_supplier != null && selectedNote.procurement_supplier !== ''
+        ? String(selectedNote.procurement_supplier)
+        : ''
+    setProcurementForm({
+      procurement_purchase_date: typeof d === 'string' ? d.slice(0, 10) : d || '',
+      procurement_amount: selectedNote.procurement_amount ?? '',
+      procurement_quantity_note: selectedNote.procurement_quantity_note || '',
+      procurement_supplier: sid,
+      procurement_vehicle: selectedNote.procurement_vehicle || '',
+      procurement_delivery_notes: selectedNote.procurement_delivery_notes || '',
+      procurement_scan: null,
+    })
+    if (sid && selectedNote.procurement_supplier_name) {
+      setSupplierComboText(
+        selectedNote.procurement_supplier_inn
+          ? `${selectedNote.procurement_supplier_name} · ${selectedNote.procurement_supplier_inn}`
+          : String(selectedNote.procurement_supplier_name)
+      )
+    } else if (!sid) {
+      setSupplierComboText('')
+    }
+  }, [
+    detailsOpen,
+    selectedNote?.id,
+    selectedNote?.procurement_purchase_date,
+    selectedNote?.procurement_amount,
+    selectedNote?.procurement_quantity_note,
+    selectedNote?.procurement_supplier,
+    selectedNote?.procurement_vehicle,
+    selectedNote?.procurement_delivery_notes,
+    selectedNote?.procurement_scan_url,
+  ])
+
+  useEffect(() => {
+    if (!detailsOpen) return
+    const id = procurementForm.procurement_supplier
+    if (!id) return
+    const s = supplierRows.find((x) => String(x.id) === String(id))
+    if (!s) return
+    const label = formatSupplierComboLabel(s)
+    setSupplierComboText((prev) => (!prev ? label : prev))
+  }, [detailsOpen, procurementForm.procurement_supplier, supplierRows])
+
+  const pickProcurementSupplier = (s) => {
+    setProcurementForm((p) => ({ ...p, procurement_supplier: String(s.id) }))
+    setSupplierComboText(formatSupplierComboLabel(s))
+    setSupplierComboOpen(false)
+  }
 
   const onCreate = async (e) => {
     e.preventDefault()
@@ -262,8 +537,8 @@ export default function IssueNotes() {
     }
   }
 
-  const openDetailsById = async (id, fallbackRow = null) => {
-    setError('')
+  const openDetailsById = async (id, fallbackRow = null, { clearError = true } = {}) => {
+    if (clearError) setError('')
     setDetailsOpen(true)
     setSelectedNote(fallbackRow)
     setDetailsLoading(true)
@@ -279,7 +554,7 @@ export default function IssueNotes() {
     }
   }
 
-  const openDetails = async (row) => openDetailsById(row.id, row)
+  const openDetails = async (row) => openDetailsById(row.id, row, {})
 
   const openShortageTooltip = (event, items) => {
     if (!items?.length) return
@@ -327,7 +602,186 @@ export default function IssueNotes() {
     setStockByProduct({})
   }
 
+  const refreshNoteInModal = async (id) => {
+    setError('')
+    try {
+      const full = await ordersApi.issueNoteGet(id)
+      setSelectedNote(full)
+      await loadStockForNote(full)
+      await load()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.detailsLoadError'))
+    }
+  }
+
+  const patchIssueStatus = async (status, { closeAfter = false } = {}) => {
+    if (!selectedNote?.id) return
+    setError('')
+    try {
+      await ordersApi.issueNoteUpdate(selectedNote.id, { status })
+      await refreshNoteInModal(selectedNote.id)
+      if (closeAfter) closeDetails()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const onSendToProcurementFromDetails = () => {
+    if (!selectedNote?.id) return
+    setError('')
+    setProcurementCommentModal({ open: true, noteId: selectedNote.id, text: '' })
+  }
+
+  const submitProcurementComment = async () => {
+    const noteId = procurementCommentModal.noteId
+    const trimmed = String(procurementCommentModal.text || '').trim()
+    if (!noteId || !trimmed) {
+      setError(t('issueNotes.rejectCommentRequired'))
+      return
+    }
+    setError('')
+    try {
+      await ordersApi.issueNoteSendToProcurement(noteId, { procurement_notes: trimmed })
+      setProcurementCommentModal({ open: false, noteId: null, text: '' })
+      await load()
+      if (selectedNote?.id === noteId) await refreshNoteInModal(noteId)
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const submitQuickSupplier = async () => {
+    const name = String(supplierQuickModal.name || '').trim()
+    if (!name) {
+      setError(t('issueNotes.procurementSupplierNameRequired'))
+      return
+    }
+    setError('')
+    try {
+      const created = await suppliersApi.create({
+        name,
+        inn: String(supplierQuickModal.inn || '').trim(),
+        contact: String(supplierQuickModal.contact || '').trim(),
+      })
+      setSupplierRows((prev) => [...prev, created].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru')))
+      setProcurementForm((p) => ({
+        ...p,
+        procurement_supplier: String(created.id),
+      }))
+      setSupplierQuickModal({ open: false, name: '', inn: '', contact: '' })
+      setSupplierComboText(formatSupplierComboLabel(created))
+    } catch (err) {
+      setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.createError'))
+    }
+  }
+
+  const onSaveProcurementDetails = async () => {
+    if (!selectedNote?.id) return
+    setError('')
+    try {
+      const payload = {
+        procurement_purchase_date: procurementForm.procurement_purchase_date || undefined,
+        procurement_amount: procurementForm.procurement_amount === '' ? undefined : procurementForm.procurement_amount,
+        procurement_quantity_note: procurementForm.procurement_quantity_note,
+        procurement_supplier:
+          procurementForm.procurement_supplier === '' ? null : Number(procurementForm.procurement_supplier),
+        procurement_item_ids: procurementItemIds,
+        procurement_vehicle: procurementForm.procurement_vehicle,
+        procurement_delivery_notes: procurementForm.procurement_delivery_notes,
+        procurement_scan: procurementForm.procurement_scan || undefined,
+      }
+      await ordersApi.issueNoteProcurementDetails(selectedNote.id, payload)
+      await refreshNoteInModal(selectedNote.id)
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const onAssignInspection = async () => {
+    if (!selectedNote?.id) return
+    if (!assignControllerIds.length) {
+      setError(t('issueNotes.assignControllersRequired'))
+      return
+    }
+    setError('')
+    try {
+      await ordersApi.issueNoteAssignInspection(selectedNote.id, { user_ids: assignControllerIds })
+      await refreshNoteInModal(selectedNote.id)
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const toggleAssignController = (id) => {
+    const n = Number(id)
+    setAssignControllerIds((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]))
+  }
+
+  const onProcurementDeclineDetails = async () => {
+    const rejectionComment = askRejectComment()
+    if (!rejectionComment) return
+    setError('')
+    try {
+      await ordersApi.issueNoteProcurementDecline(selectedNote.id, { rejection_comment: rejectionComment })
+      await refreshNoteInModal(selectedNote.id)
+      closeDetails()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const onProcurementProceedDetails = async () => {
+    setError('')
+    try {
+      await ordersApi.issueNoteProcurementProceed(selectedNote.id)
+      await refreshNoteInModal(selectedNote.id)
+    } catch (err) {
+      setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.procurementFillForm'))
+    }
+  }
+
+  const onGoodsArrivedDetails = async () => {
+    setError('')
+    try {
+      await ordersApi.issueNoteGoodsArrived(selectedNote.id)
+      await refreshNoteInModal(selectedNote.id)
+    } catch (err) {
+      setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.procurementFillForm'))
+    }
+  }
+
+  const onControllerComplete = async () => {
+    if (!selectedNote?.id) return
+    const lines = controllerLines.map((ln) => ({
+      item_id: ln.item_id,
+      actual_quantity: Number(String(ln.actualQty).replace(',', '.')).toFixed(3),
+      inspection_comment: (ln.inspectionComment || '').trim(),
+      inspection_photos: [],
+    }))
+    for (const ln of lines) {
+      if (!Number.isFinite(Number(ln.actual_quantity)) || Number(ln.actual_quantity) < 0) {
+        setError(t('issueNotes.validation'))
+        return
+      }
+    }
+    const filesByItemId = {}
+    controllerLines.forEach((ln) => {
+      if (ln.photoFiles?.length) filesByItemId[ln.item_id] = ln.photoFiles
+    })
+    setError('')
+    try {
+      await ordersApi.issueNoteControllerComplete(selectedNote.id, { lines, filesByItemId })
+      await refreshNoteInModal(selectedNote.id)
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
   const loadStockForNote = async (note) => {
+    if (!canSeeShortageHints) {
+      setStockByProduct({})
+      return
+    }
     const items = note?.items || []
     const productIds = Array.from(new Set(items.map((it) => Number(it?.product)).filter((v) => Number.isFinite(v) && v > 0)))
     if (!productIds.length) {
@@ -369,23 +823,16 @@ export default function IssueNotes() {
       if (!picked) return
       rejectionComment = picked
     }
-    await onApprove(selectedNote.id, status, rejectionComment)
-    setSelectedNote((prev) =>
-      prev
-        ? {
-            ...prev,
-            status,
-            rejection_comment: status === 'rejected' ? rejectionComment : (prev.rejection_comment || ''),
-            status_display:
-              status === 'approved'
-                ? t('issueNotes.approvedStatusLabel')
-                : status === 'rejected'
-                  ? t('issueNotes.rejectedStatusLabel')
-                  : prev.status_display,
-          }
-        : prev
-    )
-    closeDetails()
+    setError('')
+    try {
+      const payload = { status }
+      if (status === 'rejected') payload.rejection_comment = rejectionComment
+      await ordersApi.issueNoteUpdate(selectedNote.id, payload)
+      await refreshNoteInModal(selectedNote.id)
+      if (status === 'rejected') closeDetails()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
   }
 
   const noteItems = selectedNote?.items || []
@@ -407,6 +854,93 @@ export default function IssueNotes() {
       }),
     [noteItems, stockByProduct, t]
   )
+
+  const itemShortageByItemId = useMemo(() => {
+    const m = {}
+    stockRowsForSelected.forEach((row, idx) => {
+      const it = noteItems[idx]
+      if (!it?.id) return
+      if (row.shortage > 0) m[String(it.id)] = true
+    })
+    return m
+  }, [noteItems, stockRowsForSelected])
+
+  const procurementProductGroups = useMemo(() => {
+    const items = selectedNote?.items || []
+    const map = new Map()
+    for (const it of items) {
+      const pid = Number(it.product)
+      if (!Number.isFinite(pid)) continue
+      if (!map.has(pid)) {
+        map.set(pid, {
+          productId: pid,
+          label: `${it.product_sku ? `${it.product_sku} · ` : ''}${it.product_name || `#${pid}`}`,
+          lines: [],
+        })
+      }
+      map.get(pid).lines.push(it)
+    }
+    return Array.from(map.values())
+  }, [selectedNote?.items])
+
+  const apiProcurementItemIdsKey = useMemo(
+    () => JSON.stringify(selectedNote?.procurement_item_ids || []),
+    [selectedNote?.procurement_item_ids]
+  )
+
+  const procurementSelectedLinesSummary = useMemo(() => {
+    const items = selectedNote?.items || []
+    const raw = selectedNote?.procurement_item_ids
+    const idSet = new Set((Array.isArray(raw) ? raw : []).map((x) => Number(x)).filter((n) => Number.isFinite(n)))
+    if (!idSet.size) return ''
+    const labels = items
+      .filter((it) => idSet.has(Number(it.id)))
+      .map((it) => `${it.product_sku ? `${it.product_sku} ` : ''}${it.product_name || ''}`.trim())
+    return [...new Set(labels)].filter(Boolean).join('; ')
+  }, [selectedNote?.items, selectedNote?.procurement_item_ids])
+
+  useEffect(() => {
+    if (!detailsOpen || !selectedNote) {
+      setProcurementItemIds([])
+      return
+    }
+    if (selectedNote.status !== 'awaiting_procurement' && selectedNote.status !== 'procurement_active') {
+      setProcurementItemIds([])
+      return
+    }
+    const fromApi = selectedNote.procurement_item_ids
+    if (Array.isArray(fromApi) && fromApi.length > 0) {
+      setProcurementItemIds(fromApi.map((x) => Number(x)).filter((n) => Number.isFinite(n)))
+      return
+    }
+    setProcurementItemIds((prev) => {
+      const defBase = computeDefaultProcurementItemIds(selectedNote, {})
+      if (defBase && defBase.length) return defBase
+      if (prev.length > 0) return prev
+      const defShort = computeDefaultProcurementItemIds(selectedNote, itemShortageByItemId)
+      return defShort && defShort.length ? defShort : []
+    })
+  }, [detailsOpen, selectedNote?.id, selectedNote?.status, apiProcurementItemIdsKey, itemShortageByItemId, selectedNote?.items])
+
+  const toggleProcurementProductGroup = (productId) => {
+    const g = procurementProductGroups.find((x) => x.productId === productId)
+    if (!g) return
+    const ids = g.lines.map((l) => l.id).filter((id) => id != null).map(Number)
+    setProcurementItemIds((prev) => {
+      const allIn = ids.length > 0 && ids.every((id) => prev.includes(id))
+      if (allIn) return prev.filter((id) => !ids.includes(id))
+      const set = new Set(prev)
+      ids.forEach((id) => set.add(id))
+      return Array.from(set)
+    })
+  }
+
+  const isProcurementGroupFullySelected = (productId) => {
+    const g = procurementProductGroups.find((x) => x.productId === productId)
+    if (!g?.lines.length) return false
+    const ids = g.lines.map((l) => l.id).filter((id) => id != null).map(Number)
+    return ids.length > 0 && ids.every((id) => procurementItemIds.includes(id))
+  }
 
   const senderName = (note) =>
     note?.created_by_full_name ||
@@ -437,8 +971,8 @@ export default function IssueNotes() {
     return rows.filter((n) => {
       if (statusFilter && String(n.status) !== String(statusFilter)) return false
       if (objectFilter && String(n.construction_object || '') !== String(objectFilter)) return false
-      if (shortageFilter === 'with' && !noteShortageById[String(n.id)]) return false
-      if (shortageFilter === 'without' && noteShortageById[String(n.id)]) return false
+      if (canSeeShortageHints && shortageFilter === 'with' && !noteShortageById[String(n.id)]) return false
+      if (canSeeShortageHints && shortageFilter === 'without' && noteShortageById[String(n.id)]) return false
       if (!inDateRange(n.created_at, datePreset, dateFrom, dateTo)) return false
       if (!q) return true
       const haystack = [
@@ -454,7 +988,18 @@ export default function IssueNotes() {
         .toLowerCase()
       return haystack.includes(q)
     })
-  }, [rows, debouncedSearch, statusFilter, objectFilter, shortageFilter, noteShortageById, datePreset, dateFrom, dateTo])
+  }, [
+    rows,
+    debouncedSearch,
+    statusFilter,
+    objectFilter,
+    shortageFilter,
+    noteShortageById,
+    datePreset,
+    dateFrom,
+    dateTo,
+    canSeeShortageHints,
+  ])
 
   const sortedRows = useMemo(() => {
     const list = [...filteredRows]
@@ -492,6 +1037,111 @@ export default function IssueNotes() {
   }, [debouncedSearch, statusFilter, objectFilter, shortageFilter, datePreset, dateFrom, dateTo, sortKey, sortDir])
 
   const listPages = totalPages(sortedRows.length, listPageSize)
+
+  const tableShowActions =
+    canApprove ||
+    canSendProcurement ||
+    canProcurement ||
+    canStorekeeperFlow ||
+    canForemanRole
+
+  const issueNotesTableColCount = 8 + (tableShowActions ? 1 : 0)
+
+  const onRowSendProcurement = (e, n) => {
+    e.stopPropagation()
+    setError('')
+    setProcurementCommentModal({ open: true, noteId: n.id, text: '' })
+  }
+
+  const onRowQuickPatch = async (e, n, status) => {
+    e.stopPropagation()
+    try {
+      await ordersApi.issueNoteUpdate(n.id, { status })
+      await load()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const openQuickAssignModal = (e, n) => {
+    e.stopPropagation()
+    setError('')
+    const ids = n.inspection_invited_user_ids
+    setQuickAssignIds(Array.isArray(ids) ? ids.map((x) => Number(x)) : [])
+    setQuickAssignModal({ open: true, note: n })
+  }
+
+  const toggleQuickAssignController = (id) => {
+    const num = Number(id)
+    setQuickAssignIds((prev) => (prev.includes(num) ? prev.filter((x) => x !== num) : [...prev, num]))
+  }
+
+  const submitQuickAssign = async () => {
+    const n = quickAssignModal.note
+    if (!n?.id) return
+    if (!quickAssignIds.length) {
+      setError(t('issueNotes.assignControllersRequired'))
+      return
+    }
+    setError('')
+    try {
+      await ordersApi.issueNoteAssignInspection(n.id, { user_ids: quickAssignIds })
+      setQuickAssignModal({ open: false, note: null })
+      setQuickAssignIds([])
+      await load()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
+
+  const onRowGoodsArrived = async (e, n) => {
+    e.stopPropagation()
+    setError('')
+    try {
+      await ordersApi.issueNoteGoodsArrived(n.id)
+      await load()
+    } catch (err) {
+      const detail = formatApiErrorDetail(err?.response?.data)
+      const msg = detail || t('issueNotes.procurementFillForm')
+      if (err?.response?.status === 400 && n?.id) {
+        await openDetailsById(n.id, n, { clearError: false })
+        setError(msg)
+      } else {
+        setError(msg)
+      }
+    }
+  }
+
+  const onRowProcurementProceed = async (e, n) => {
+    e.stopPropagation()
+    setError('')
+    try {
+      await ordersApi.issueNoteProcurementProceed(n.id)
+      await load()
+    } catch (err) {
+      const detail = formatApiErrorDetail(err?.response?.data)
+      const msg = detail || t('issueNotes.procurementFillForm')
+      if (err?.response?.status === 400 && n?.id) {
+        await openDetailsById(n.id, n, { clearError: false })
+        setError(msg)
+      } else {
+        setError(msg)
+      }
+    }
+  }
+
+  const onRowProcurementDecline = async (e, n) => {
+    e.stopPropagation()
+    const rejectionComment = askRejectComment()
+    if (!rejectionComment) return
+    setError('')
+    try {
+      await ordersApi.issueNoteProcurementDecline(n.id, { rejection_comment: rejectionComment })
+      await load()
+    } catch (err) {
+      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+    }
+  }
 
   const toggleSort = (nextKey) => {
     setListPage(1)
@@ -719,6 +1369,124 @@ export default function IssueNotes() {
           </form>
         </Modal>
       )}
+      <Modal
+        open={procurementCommentModal.open}
+        title={t('issueNotes.sendToProcurement')}
+        onClose={() => setProcurementCommentModal({ open: false, noteId: null, text: '' })}
+        stacked
+      >
+        <div className={formStyles.row}>
+          <label>{t('issueNotes.procurementNotesPrompt')}</label>
+          <textarea
+            className={formStyles.input}
+            rows={4}
+            value={procurementCommentModal.text}
+            onChange={(e) => setProcurementCommentModal((m) => ({ ...m, text: e.target.value }))}
+          />
+        </div>
+        <div className={formStyles.actions}>
+          <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={submitProcurementComment}>
+            {t('common.send')}
+          </button>
+          <button
+            type="button"
+            className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+            onClick={() => setProcurementCommentModal({ open: false, noteId: null, text: '' })}
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        open={supplierQuickModal.open}
+        title={t('issueNotes.procurementAddSupplier')}
+        onClose={() => setSupplierQuickModal({ open: false, name: '', inn: '', contact: '' })}
+        stacked
+      >
+        <div className={formStyles.row}>
+          <label>{t('issueNotes.procurementNewSupplierName')}</label>
+          <input
+            className={formStyles.input}
+            value={supplierQuickModal.name}
+            onChange={(e) => setSupplierQuickModal((m) => ({ ...m, name: e.target.value }))}
+          />
+        </div>
+        <div className={formStyles.row}>
+          <label>{t('suppliers.inn')}</label>
+          <input
+            className={formStyles.input}
+            value={supplierQuickModal.inn}
+            onChange={(e) => setSupplierQuickModal((m) => ({ ...m, inn: e.target.value }))}
+          />
+        </div>
+        <div className={formStyles.row}>
+          <label>{t('suppliers.contact')}</label>
+          <input
+            className={formStyles.input}
+            value={supplierQuickModal.contact}
+            onChange={(e) => setSupplierQuickModal((m) => ({ ...m, contact: e.target.value }))}
+          />
+        </div>
+        <div className={formStyles.actions}>
+          <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={submitQuickSupplier}>
+            {t('common.save')}
+          </button>
+          <button
+            type="button"
+            className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+            onClick={() => setSupplierQuickModal({ open: false, name: '', inn: '', contact: '' })}
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </Modal>
+      <Modal
+        open={quickAssignModal.open}
+        title={
+          quickAssignModal.note?.number
+            ? `${t('issueNotes.assignControllersTitle')} — ${quickAssignModal.note.number}`
+            : t('issueNotes.assignControllersTitle')
+        }
+        onClose={() => {
+          setQuickAssignModal({ open: false, note: null })
+          setQuickAssignIds([])
+        }}
+        stacked
+        wide
+      >
+        <p className={styles.assignHint}>{t('issueNotes.assignControllersHint')}</p>
+        {controllers.length ? (
+          <div className={styles.controllerChips}>
+            {controllers.map((c) => (
+              <label key={c.id} className={styles.ctrlChip}>
+                <input
+                  type="checkbox"
+                  checked={quickAssignIds.includes(c.id)}
+                  onChange={() => toggleQuickAssignController(c.id)}
+                />
+                <span>{c.display_name}</span>
+              </label>
+            ))}
+          </div>
+        ) : (
+          <div>{t('issueNotes.noControllers')}</div>
+        )}
+        <div className={formStyles.actions}>
+          <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={submitQuickAssign}>
+            {t('issueNotes.assignAndNotify')}
+          </button>
+          <button
+            type="button"
+            className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+            onClick={() => {
+              setQuickAssignModal({ open: false, note: null })
+              setQuickAssignIds([])
+            }}
+          >
+            {t('common.cancel')}
+          </button>
+        </div>
+      </Modal>
       <Modal open={detailsOpen} title={t('issueNotes.detailsTitle')} onClose={closeDetails} xwide>
         {detailsLoading ? (
           <div>{t('common.loading')}</div>
@@ -726,6 +1494,7 @@ export default function IssueNotes() {
           <div>{t('common.none')}</div>
         ) : (
           <div className={styles.detailsWrap}>
+            {error ? <div className={formStyles.error}>{error}</div> : null}
             <div className={styles.detailsGrid}>
               <div>
                 <div className={styles.fieldLabel}>{t('issueNotes.number')}</div>
@@ -761,10 +1530,361 @@ export default function IssueNotes() {
                 <div>{selectedNote.comment}</div>
               </div>
             ) : null}
+            {selectedNote.procurement_notes ? (
+              <div className={styles.detailsComment}>
+                <div className={styles.fieldLabel}>{t('issueNotes.procurementNotesLabel')}</div>
+                <div>{selectedNote.procurement_notes}</div>
+              </div>
+            ) : null}
             {selectedNote.status === 'rejected' && selectedNote.rejection_comment ? (
               <div className={styles.detailsComment}>
                 <div className={styles.fieldLabel}>{t('issueNotes.rejectCommentLabel')}</div>
                 <div>{selectedNote.rejection_comment}</div>
+              </div>
+            ) : null}
+
+            {!(
+              canProcurement &&
+              (selectedNote.status === 'awaiting_procurement' || selectedNote.status === 'procurement_active')
+            ) &&
+            (selectedNote.procurement_purchase_date ||
+              selectedNote.procurement_amount ||
+              selectedNote.procurement_quantity_note ||
+              selectedNote.procurement_counterparty ||
+              selectedNote.procurement_supplier_name ||
+              (Array.isArray(selectedNote.procurement_item_ids) && selectedNote.procurement_item_ids.length > 0) ||
+              selectedNote.procurement_vehicle ||
+              selectedNote.procurement_delivery_notes ||
+              selectedNote.procurement_scan_url) ? (
+              <div className={styles.detailsComment}>
+                <div className={styles.fieldLabel}>{t('issueNotes.procurementDetailsReadonly')}</div>
+                <div className={styles.procurementReadonlyGrid}>
+                  {selectedNote.procurement_purchase_date ? (
+                    <div>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementPurchaseDate')}</span>{' '}
+                      {String(selectedNote.procurement_purchase_date).slice(0, 10)}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_amount != null && selectedNote.procurement_amount !== '' ? (
+                    <div>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementAmount')}</span> {selectedNote.procurement_amount}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_quantity_note ? (
+                    <div>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementQtyNote')}</span> {selectedNote.procurement_quantity_note}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_supplier_name || selectedNote.procurement_counterparty ? (
+                    <>
+                      <div>
+                        <span className={styles.fieldLabel}>{t('issueNotes.procurementSupplier')}</span>{' '}
+                        {selectedNote.procurement_supplier_name || selectedNote.procurement_counterparty}
+                      </div>
+                      {selectedNote.procurement_supplier_inn ? (
+                        <div>
+                          <span className={styles.fieldLabel}>{t('suppliers.inn')}</span> {selectedNote.procurement_supplier_inn}
+                        </div>
+                      ) : null}
+                      {selectedNote.procurement_supplier_contact ? (
+                        <div>
+                          <span className={styles.fieldLabel}>{t('suppliers.contact')}</span> {selectedNote.procurement_supplier_contact}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {procurementSelectedLinesSummary ? (
+                    <div className={styles.procurementReadonlyFull}>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementLinesReadonly')}</span> {procurementSelectedLinesSummary}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_vehicle ? (
+                    <div>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementVehicle')}</span> {selectedNote.procurement_vehicle}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_delivery_notes ? (
+                    <div className={styles.procurementReadonlyFull}>
+                      <span className={styles.fieldLabel}>{t('issueNotes.procurementDeliveryNotes')}</span> {selectedNote.procurement_delivery_notes}
+                    </div>
+                  ) : null}
+                  {selectedNote.procurement_scan_url ? (
+                    <div className={styles.procurementReadonlyFull}>
+                      <a href={selectedNote.procurement_scan_url} target="_blank" rel="noreferrer">
+                        {t('issueNotes.procurementScanLink')}
+                      </a>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
+
+            {canProcurement && (selectedNote.status === 'awaiting_procurement' || selectedNote.status === 'procurement_active') ? (
+              <div className={styles.procurementEditBox}>
+                <div className={styles.fieldLabel}>{t('issueNotes.procurementDetailsTitle')}</div>
+                <div className={styles.procurementEditGrid}>
+                  <label className={`${styles.fieldLabel} ${styles.fieldRequired}`}>{t('issueNotes.procurementPurchaseDate')}</label>
+                  <input
+                    className={formStyles.input}
+                    type="date"
+                    value={procurementForm.procurement_purchase_date || ''}
+                    onChange={(e) => setProcurementForm((p) => ({ ...p, procurement_purchase_date: e.target.value }))}
+                  />
+                  <label className={styles.fieldLabel}>{t('issueNotes.procurementAmount')}</label>
+                  <input
+                    className={formStyles.input}
+                    type="text"
+                    inputMode="decimal"
+                    value={procurementForm.procurement_amount}
+                    onChange={(e) => setProcurementForm((p) => ({ ...p, procurement_amount: e.target.value }))}
+                  />
+                  <label className={`${styles.fieldLabel} ${styles.fieldRequired}`}>{t('issueNotes.procurementQtyNote')}</label>
+                  <input
+                    className={formStyles.input}
+                    value={procurementForm.procurement_quantity_note}
+                    onChange={(e) => setProcurementForm((p) => ({ ...p, procurement_quantity_note: e.target.value }))}
+                  />
+                  <label className={`${styles.fieldLabel} ${styles.fieldRequired}`}>{t('issueNotes.procurementSupplier')}</label>
+                  <div className={styles.procurementSupplierRow}>
+                    <div className={styles.supplierComboWrap} ref={supplierComboRef}>
+                      <input
+                        className={formStyles.input}
+                        type="text"
+                        autoComplete="off"
+                        role="combobox"
+                        aria-expanded={supplierComboOpen}
+                        aria-autocomplete="list"
+                        placeholder={t('issueNotes.procurementSupplierSearchPlaceholder')}
+                        aria-label={t('issueNotes.procurementSupplier')}
+                        value={supplierComboText}
+                        onChange={(e) => {
+                          setSupplierComboText(e.target.value)
+                          setSupplierComboOpen(true)
+                          setProcurementForm((p) => ({ ...p, procurement_supplier: '' }))
+                        }}
+                        onFocus={() => setSupplierComboOpen(true)}
+                      />
+                      {supplierComboOpen ? (
+                        <div className={styles.supplierComboPanel} role="listbox">
+                          {!supplierRows.length ? (
+                            <div className={styles.supplierComboEmpty}>{t('issueNotes.procurementNoSuppliersInDirectory')}</div>
+                          ) : suppliersComboFiltered.length ? (
+                            <ul className={styles.supplierComboList}>
+                              {suppliersComboFiltered.map((s) => (
+                                <li key={s.id}>
+                                  <button
+                                    type="button"
+                                    className={styles.supplierComboOption}
+                                    role="option"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => pickProcurementSupplier(s)}
+                                  >
+                                    <span className={styles.supplierComboOptionTitle}>{formatSupplierComboLabel(s)}</span>
+                                    {s.contact ? (
+                                      <span className={styles.supplierComboOptionMeta}>{s.contact}</span>
+                                    ) : null}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div className={styles.supplierComboEmpty}>{t('issueNotes.procurementNoSupplierMatch')}</div>
+                          )}
+                        </div>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                      onClick={() => setSupplierQuickModal({ open: true, name: '', inn: '', contact: '' })}
+                    >
+                      {t('issueNotes.procurementAddSupplier')}
+                    </button>
+                  </div>
+                  <label className={styles.fieldLabel}>{t('issueNotes.procurementVehicle')}</label>
+                  <input
+                    className={formStyles.input}
+                    value={procurementForm.procurement_vehicle}
+                    onChange={(e) => setProcurementForm((p) => ({ ...p, procurement_vehicle: e.target.value }))}
+                  />
+                  <label className={styles.procurementFull}>{t('issueNotes.procurementDeliveryNotes')}</label>
+                  <textarea
+                    className={`${formStyles.input} ${styles.procurementFull}`}
+                    rows={2}
+                    value={procurementForm.procurement_delivery_notes}
+                    onChange={(e) => setProcurementForm((p) => ({ ...p, procurement_delivery_notes: e.target.value }))}
+                  />
+                </div>
+                {procurementProductGroups.length > 1 ? (
+                  <div className={styles.procurementProductPick}>
+                    <div className={`${styles.fieldLabel} ${styles.fieldRequired}`}>{t('issueNotes.procurementLinesTitle')}</div>
+                    <p className={styles.procurementHint}>{t('issueNotes.procurementLinesPickHint')}</p>
+                    <div className={styles.procurementProductCards}>
+                      {procurementProductGroups.map((g) => (
+                        <div key={g.productId} className={styles.procurementProductCard}>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={isProcurementGroupFullySelected(g.productId)}
+                              onChange={() => toggleProcurementProductGroup(g.productId)}
+                            />
+                            <span>
+                              <strong>{g.label}</strong>
+                              {g.lines.length > 1 ? (
+                                <span className={styles.procurementCardMeta}>
+                                  {' '}
+                                  ({g.lines.length} {t('issueNotes.procurementLineCount')})
+                                </span>
+                              ) : null}
+                            </span>
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className={styles.procurementHint}>{t('issueNotes.procurementLinesAutoHint')}</p>
+                )}
+                <div className={styles.procurementScanRow}>
+                  <label className={styles.fieldLabel}>{t('issueNotes.procurementScanFile')}</label>
+                  <input
+                    type="file"
+                    accept="image/*,.pdf,application/pdf"
+                    onChange={(e) =>
+                      setProcurementForm((p) => ({ ...p, procurement_scan: e.target.files?.[0] || null }))
+                    }
+                  />
+                  {selectedNote.procurement_scan_url ? (
+                    <a href={selectedNote.procurement_scan_url} target="_blank" rel="noreferrer" className={styles.procurementScanExisting}>
+                      {t('issueNotes.procurementScanLink')}
+                    </a>
+                  ) : null}
+                </div>
+                <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={onSaveProcurementDetails}>
+                  {t('common.save')}
+                </button>
+              </div>
+            ) : null}
+
+            {selectedNote.status === 'await_ctrl_pick' && canApprove && controllers.length > 0 ? (
+              <div className={styles.assignBox}>
+                <div className={styles.fieldLabel}>{t('issueNotes.assignControllersTitle')}</div>
+                <p className={styles.assignHint}>{t('issueNotes.assignControllersHint')}</p>
+                <div className={styles.controllerChips}>
+                  {controllers.map((c) => (
+                    <label key={c.id} className={styles.ctrlChip}>
+                      <input
+                        type="checkbox"
+                        checked={assignControllerIds.includes(c.id)}
+                        onChange={() => toggleAssignController(c.id)}
+                      />
+                      <span>{c.display_name}</span>
+                    </label>
+                  ))}
+                </div>
+                <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={onAssignInspection}>
+                  {t('issueNotes.assignAndNotify')}
+                </button>
+              </div>
+            ) : null}
+
+            {selectedNote.status === 'awaiting_controller' && canController && canUserInspectIssueNote(user, selectedNote) ? (
+              <div className={`${styles.detailsComment} ${styles.inspectionPanel}`}>
+                <div className={styles.fieldLabel}>{t('issueNotes.controllerComplete')}</div>
+                <div className={styles.inspectionTableWrap}>
+                  <table className={`${tableStyles.table} ${styles.inspectionTable}`}>
+                    <thead>
+                      <tr>
+                        <th>{t('issueNotes.product')}</th>
+                        <th>{t('issueNotes.actualQty')}</th>
+                        <th>{t('issueNotes.inspectionPhotosPick')}</th>
+                        <th>{t('issueNotes.inspectionLineComment')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {controllerLines.map((ln, idx) => {
+                        const it = noteItems.find((x) => x.id === ln.item_id)
+                        const label = it
+                          ? `${it.product_sku ? `${it.product_sku} ` : ''}${it.product_name || ''}`.trim()
+                          : `#${ln.item_id}`
+                        return (
+                          <tr key={ln.item_id}>
+                            <td className={styles.inspectionProductCell} title={label}>
+                              {label || t('common.none')}
+                            </td>
+                            <td>
+                              <input
+                                className={styles.inspectionInput}
+                                type="text"
+                                inputMode="decimal"
+                                value={ln.actualQty}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  setControllerLines((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, actualQty: v } : row))
+                                  )
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <div className={styles.inspectionFileRow}>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  className={styles.inspectionFile}
+                                  onChange={(e) => {
+                                    const files = Array.from(e.target.files || [])
+                                    setControllerLines((prev) =>
+                                      prev.map((row, i) =>
+                                        i === idx ? { ...row, photoFiles: [...row.photoFiles, ...files] } : row
+                                      )
+                                    )
+                                    e.target.value = ''
+                                  }}
+                                />
+                                <span className={styles.fileCount}>
+                                  {ln.photoFiles?.length ? `${ln.photoFiles.length} ${t('issueNotes.filesPicked')}` : '—'}
+                                </span>
+                                {ln.photoFiles?.length ? (
+                                  <button
+                                    type="button"
+                                    className={styles.clearFilesBtn}
+                                    onClick={() =>
+                                      setControllerLines((prev) =>
+                                        prev.map((row, i) => (i === idx ? { ...row, photoFiles: [] } : row))
+                                      )
+                                    }
+                                  >
+                                    ×
+                                  </button>
+                                ) : null}
+                              </div>
+                            </td>
+                            <td>
+                              <input
+                                className={styles.inspectionInput}
+                                type="text"
+                                value={ln.inspectionComment}
+                                onChange={(e) => {
+                                  const v = e.target.value
+                                  setControllerLines((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, inspectionComment: v } : row))
+                                  )
+                                }}
+                              />
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className={formStyles.actions}>
+                  <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={onControllerComplete}>
+                    {t('issueNotes.controllerComplete')}
+                  </button>
+                </div>
               </div>
             ) : null}
 
@@ -776,6 +1896,9 @@ export default function IssueNotes() {
                     <th>{t('issueNotes.product')}</th>
                     <th>{t('products.unit')}</th>
                     <th>{t('issueNotes.qty')}</th>
+                    <th>{t('issueNotes.actualQty')}</th>
+                    <th>{t('issueNotes.photosCol')}</th>
+                    <th>{t('issueNotes.inspectionCommentCol')}</th>
                     <th>{t('products.description')}</th>
                   </tr>
                 </thead>
@@ -787,70 +1910,156 @@ export default function IssueNotes() {
                         <td>{`${it.product_sku ? `${it.product_sku} - ` : ''}${it.product_name || t('common.none')}`}</td>
                         <td>{it.product_unit || it.unit || t('common.none')}</td>
                         <td>{it.quantity}</td>
+                        <td>{it.actual_quantity != null && it.actual_quantity !== '' ? it.actual_quantity : t('common.none')}</td>
+                        <td className={styles.photoLinksCell}>
+                          {Array.isArray(it.inspection_photos) && it.inspection_photos.length
+                            ? it.inspection_photos.map((url, i) => (
+                                <a key={i} href={url} target="_blank" rel="noreferrer" className={styles.photoLink}>
+                                  {i + 1}
+                                </a>
+                              ))
+                            : t('common.none')}
+                        </td>
+                        <td>{it.inspection_comment || t('common.none')}</td>
                         <td>{it.comment || t('common.none')}</td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5}>{t('common.none')}</td>
+                      <td colSpan={8}>{t('common.none')}</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
-            <div className={styles.stockSection}>
-              <div className={styles.fieldLabel}>{t('issueNotes.stockSectionTitle')}</div>
-              {stockLoading ? (
-                <div>{t('common.loading')}</div>
-              ) : !stockRowsForSelected.length ? (
-                <div>{t('common.none')}</div>
-              ) : (
-                <div className={styles.stockCards}>
-                  {stockRowsForSelected.map((row) => (
-                    <div key={row.key} className={`${styles.stockCard} ${row.shortage > 0 ? styles.stockCardShortage : ''}`}>
-                      <div className={styles.stockCardTitle}>{row.productLabel}</div>
-                      <div className={styles.stockLine}>
-                        <span>{t('issueNotes.qty')}:</span> <b>{row.need.toFixed(3)}</b>
+            {canSeeShortageHints &&
+            !(selectedNote.status === 'awaiting_controller' && canController && canUserInspectIssueNote(user, selectedNote)) ? (
+              <div className={styles.stockSection}>
+                <div className={styles.fieldLabel}>{t('issueNotes.stockSectionTitle')}</div>
+                {stockLoading ? (
+                  <div>{t('common.loading')}</div>
+                ) : !stockRowsForSelected.length ? (
+                  <div>{t('common.none')}</div>
+                ) : (
+                  <div className={styles.stockCards}>
+                    {stockRowsForSelected.map((row) => (
+                      <div key={row.key} className={`${styles.stockCard} ${row.shortage > 0 ? styles.stockCardShortage : ''}`}>
+                        <div className={styles.stockCardTitle}>{row.productLabel}</div>
+                        <div className={styles.stockLine}>
+                          <span>{t('issueNotes.qty')}:</span> <b>{row.need.toFixed(3)}</b>
+                        </div>
+                        <div className={styles.stockLine}>
+                          <span>{t('issueNotes.stockTotal')}:</span> <b>{row.total.toFixed(3)}</b>
+                        </div>
+                        <div className={`${styles.stockLine} ${row.shortage > 0 ? styles.stockDanger : ''}`}>
+                          <span>{t('issueNotes.shortageQty')}:</span> <b>{row.shortage.toFixed(3)}</b>
+                        </div>
+                        <div className={styles.stockWarehouses}>
+                          {row.byWarehouse.length
+                            ? row.byWarehouse.map((w) => `${w.warehouse}: ${Number(w.qty || 0).toFixed(3)}`).join(', ')
+                            : t('common.none')}
+                        </div>
                       </div>
-                      <div className={styles.stockLine}>
-                        <span>{t('issueNotes.stockTotal')}:</span> <b>{row.total.toFixed(3)}</b>
-                      </div>
-                      <div className={`${styles.stockLine} ${row.shortage > 0 ? styles.stockDanger : ''}`}>
-                        <span>{t('issueNotes.shortageQty')}:</span> <b>{row.shortage.toFixed(3)}</b>
-                      </div>
-                      <div className={styles.stockWarehouses}>
-                        {row.byWarehouse.length
-                          ? row.byWarehouse.map((w) => `${w.warehouse}: ${Number(w.qty || 0).toFixed(3)}`).join(', ')
-                          : t('common.none')}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {canApprove ? (
-              <div className={formStyles.actions}>
-                {selectedNote.status === 'submitted' ? (
-                  <>
-                    <button
-                      type="button"
-                      className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                      onClick={() => onApproveFromDetails('approved')}
-                    >
-                      {t('issueNotes.approve')}
-                    </button>
-                    <button
-                      type="button"
-                      className={`${formStyles.btn} ${formStyles.btnSecondary}`}
-                      onClick={() => onApproveFromDetails('rejected')}
-                    >
-                      {t('issueNotes.reject')}
-                    </button>
-                  </>
-                ) : null}
+                    ))}
+                  </div>
+                )}
               </div>
             ) : null}
+
+            <div className={`${formStyles.actions} ${styles.detailActions}`}>
+              {selectedNote.status === 'submitted' &&
+              canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={() => onApproveFromDetails('approved')}
+                >
+                  {t('issueNotes.approve')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'submitted' && canApprove ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                  onClick={() => onApproveFromDetails('rejected')}
+                >
+                  {t('issueNotes.reject')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'submitted' && canSendProcurement ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                  onClick={onSendToProcurementFromDetails}
+                >
+                  {t('issueNotes.sendToProcurement')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'awaiting_procurement' && canProcurement ? (
+                <>
+                  <button
+                    type="button"
+                    className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                    onClick={onProcurementProceedDetails}
+                  >
+                    {t('issueNotes.procurementProceed')}
+                  </button>
+                  <button
+                    type="button"
+                    className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                    onClick={onProcurementDeclineDetails}
+                  >
+                    {t('issueNotes.procurementDecline')}
+                  </button>
+                </>
+              ) : null}
+              {selectedNote.status === 'procurement_active' && canProcurement ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={onGoodsArrivedDetails}
+                >
+                  {t('issueNotes.goodsArrived')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'awaiting_release' &&
+              canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={() => onApproveFromDetails('approved')}
+                >
+                  {t('issueNotes.approve')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'approved' && canStorekeeperFlow ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={() => patchIssueStatus('picking')}
+                >
+                  {t('issueNotes.startPicking')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'picking' && canStorekeeperFlow ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={() => patchIssueStatus('ready_pickup')}
+                >
+                  {t('issueNotes.markReadyPickup')}
+                </button>
+              ) : null}
+              {selectedNote.status === 'ready_pickup' && canForemanConfirmIssueNote(user, selectedNote) ? (
+                <button
+                  type="button"
+                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                  onClick={() => patchIssueStatus('received_foreman', { closeAfter: true })}
+                >
+                  {t('issueNotes.confirmReceived')}
+                </button>
+              ) : null}
+            </div>
           </div>
         )}
       </Modal>
@@ -858,6 +2067,7 @@ export default function IssueNotes() {
       <div className={tableStyles.pageHead}>
         <div>
           <h1 className={tableStyles.h1}>{t('issueNotes.title')}</h1>
+          {isForeman(user) ? <p className={styles.foremanListHint}>{t('issueNotes.foremanListHint')}</p> : null}
         </div>
         {canCreate && (
           <button type="button" className={tableStyles.btnAdd} onClick={() => setFormOpen(true)}>
@@ -895,11 +2105,13 @@ export default function IssueNotes() {
                 </option>
               ))}
             </select>
-            <select className={toolbarStyles.filterSelect} value={shortageFilter} onChange={(e) => setShortageFilter(e.target.value)}>
-              <option value="">{t('issueNotes.shortageFilterAll')}</option>
-              <option value="with">{t('issueNotes.shortageFilterWith')}</option>
-              <option value="without">{t('issueNotes.shortageFilterWithout')}</option>
-            </select>
+            {canSeeShortageHints ? (
+              <select className={toolbarStyles.filterSelect} value={shortageFilter} onChange={(e) => setShortageFilter(e.target.value)}>
+                <option value="">{t('issueNotes.shortageFilterAll')}</option>
+                <option value="with">{t('issueNotes.shortageFilterWith')}</option>
+                <option value="without">{t('issueNotes.shortageFilterWithout')}</option>
+              </select>
+            ) : null}
             <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
               <option value="">{t('common.allTime')}</option>
               <option value="today">{t('common.today')}</option>
@@ -939,21 +2151,28 @@ export default function IssueNotes() {
                 <SortHeader className={styles.sortableHeader} label={t('issueNotes.sender')} sortKey="sender" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
                 <SortHeader className={styles.sortableHeader} label={t('issueNotes.status')} sortKey="status" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
                 <SortHeader className={styles.sortableHeader} label={t('issueNotes.date')} sortKey="created_at" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                {canApprove ? <th>{t('common.actions')}</th> : null}
+                {tableShowActions ? <th>{t('common.actions')}</th> : null}
               </tr>
             </thead>
             <tbody>
-              {pagedSortedRows.map((n) => (
+              {pagedSortedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={issueNotesTableColCount} className={styles.emptyTableMsg}>
+                    {rows.length === 0 ? t('issueNotes.emptyList') : t('issueNotes.emptyFiltered')}
+                  </td>
+                </tr>
+              ) : (
+                pagedSortedRows.map((n) => (
                 <tr
                   key={n.id}
-                  className={`${styles.clickableRow} ${noteShortageById[String(n.id)] ? styles.shortageRow : ''}`}
+                  className={`${styles.clickableRow} ${canSeeShortageHints && noteShortageById[String(n.id)] ? styles.shortageRow : ''}`}
                   onClick={() => openDetails(n)}
                   onMouseEnter={(e) => {
-                    if (!noteShortageById[String(n.id)]) return
+                    if (!canSeeShortageHints || !noteShortageById[String(n.id)]) return
                     openShortageTooltip(e, noteHoverInfoById[String(n.id)]?.shortageItems || [])
                   }}
                   onMouseMove={(e) => {
-                    if (!noteShortageById[String(n.id)] || !hoverTooltip.visible || hoverTooltip.type !== 'shortage') return
+                    if (!canSeeShortageHints || !noteShortageById[String(n.id)] || !hoverTooltip.visible || hoverTooltip.type !== 'shortage') return
                     moveTooltipNearCursor(e)
                   }}
                   onMouseLeave={closeTooltip}
@@ -969,7 +2188,10 @@ export default function IssueNotes() {
                   <td>
                     <div
                       className={styles.productsCell}
-                      onMouseEnter={(e) => openProductsTooltip(e, noteHoverInfoById[String(n.id)]?.productItems || [])}
+                      onMouseEnter={(e) => {
+                        if (!canSeeShortageHints) return
+                        openProductsTooltip(e, noteHoverInfoById[String(n.id)]?.productItems || [])
+                      }}
                       onMouseLeave={closeTooltip}
                     >
                       <span>{productsText(n)}</span>
@@ -980,10 +2202,11 @@ export default function IssueNotes() {
                     <StatusBadge value={noteStatusText(n)} toneValue={n.status} />
                   </td>
                   <td>{n.created_at?.slice(0, 10)}</td>
-                  {canApprove ? (
-                    <td>
-                      {n.status === 'submitted' ? (
-                        <>
+                  {tableShowActions ? (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <div className={styles.rowActions}>
+                        {n.status === 'submitted' &&
+                        canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
                           <button
                             type="button"
                             className={`${formStyles.btn} ${formStyles.btnPrimary}`}
@@ -993,7 +2216,9 @@ export default function IssueNotes() {
                             }}
                           >
                             {t('issueNotes.approve')}
-                          </button>{' '}
+                          </button>
+                        ) : null}
+                        {n.status === 'submitted' && canApprove ? (
                           <button
                             type="button"
                             className={`${formStyles.btn} ${formStyles.btnSecondary}`}
@@ -1006,14 +2231,114 @@ export default function IssueNotes() {
                           >
                             {t('issueNotes.reject')}
                           </button>
-                        </>
-                      ) : (
-                        t('common.none')
-                      )}
+                        ) : null}
+                        {n.status === 'submitted' && canSendProcurement ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                            onClick={(e) => onRowSendProcurement(e, n)}
+                          >
+                            {t('issueNotes.sendToProcurement')}
+                          </button>
+                        ) : null}
+                        {n.status === 'awaiting_procurement' && canProcurement ? (
+                          <>
+                            <button
+                              type="button"
+                              className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                              onClick={(e) => onRowProcurementProceed(e, n)}
+                            >
+                              {t('issueNotes.procurementProceed')}
+                            </button>
+                            <button
+                              type="button"
+                              className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                              onClick={(e) => onRowProcurementDecline(e, n)}
+                            >
+                              {t('issueNotes.procurementDecline')}
+                            </button>
+                          </>
+                        ) : null}
+                        {n.status === 'procurement_active' && canProcurement ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => onRowGoodsArrived(e, n)}
+                          >
+                            {t('issueNotes.goodsArrived')}
+                          </button>
+                        ) : null}
+                        {n.status === 'await_ctrl_pick' && canApprove && controllers.length > 0 ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => openQuickAssignModal(e, n)}
+                          >
+                            {t('issueNotes.rowQuickAssign')}
+                          </button>
+                        ) : null}
+                        {n.status === 'awaiting_release' &&
+                        canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onApprove(n.id, 'approved')
+                            }}
+                          >
+                            {t('issueNotes.approve')}
+                          </button>
+                        ) : null}
+                        {n.status === 'approved' && canStorekeeperFlow ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => onRowQuickPatch(e, n, 'picking')}
+                          >
+                            {t('issueNotes.startPicking')}
+                          </button>
+                        ) : null}
+                        {n.status === 'picking' && canStorekeeperFlow ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => onRowQuickPatch(e, n, 'ready_pickup')}
+                          >
+                            {t('issueNotes.markReadyPickup')}
+                          </button>
+                        ) : null}
+                        {n.status === 'ready_pickup' && canForemanConfirmIssueNote(user, n) ? (
+                          <button
+                            type="button"
+                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                            onClick={(e) => onRowQuickPatch(e, n, 'received_foreman')}
+                          >
+                            {t('issueNotes.confirmReceived')}
+                          </button>
+                        ) : null}
+                        {!(
+                          (n.status === 'submitted' &&
+                            (canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ||
+                              canApprove ||
+                              canSendProcurement)) ||
+                          (n.status === 'awaiting_procurement' && canProcurement) ||
+                          (n.status === 'procurement_active' && canProcurement) ||
+                          (n.status === 'await_ctrl_pick' && canApprove && controllers.length > 0) ||
+                          (n.status === 'awaiting_release' &&
+                            canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints)) ||
+                          (n.status === 'approved' && canStorekeeperFlow) ||
+                          (n.status === 'picking' && canStorekeeperFlow) ||
+                          (n.status === 'ready_pickup' && canForemanConfirmIssueNote(user, n))
+                        )
+                          ? t('common.none')
+                          : null}
+                      </div>
                     </td>
                   ) : null}
                 </tr>
-              ))}
+                ))
+              )}
             </tbody>
           </table>
           </div>

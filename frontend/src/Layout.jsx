@@ -2,7 +2,8 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from './auth'
-import { notifications as notificationsApi, users as usersApi } from './api'
+import { notifications as notificationsApi, orders as ordersApi, users as usersApi } from './api'
+import { normalizeListResponse } from './utils/listResponse'
 import { APP_VERSION, BRAND_LOGO_URL } from './siteConfig'
 import {
   canViewSidebar,
@@ -13,6 +14,7 @@ import {
   canManageRoles,
   canViewReports,
   canViewUsers,
+  isForeman,
 } from './permissions'
 import ThemeToggle from './ThemeToggle'
 import LanguageSelect from './components/LanguageSelect'
@@ -45,6 +47,7 @@ export default function Layout() {
   const location = useLocation()
   const lastTrackedRef = useRef('')
   const [unreadCount, setUnreadCount] = useState(0)
+  const [readyPickupCount, setReadyPickupCount] = useState(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       return localStorage.getItem('layout.sidebarCollapsed') === '1'
@@ -73,6 +76,19 @@ export default function Layout() {
     }
   }, [user])
 
+  const pullReadyPickupCount = useCallback(async () => {
+    if (!isForeman(user) || !canViewIssueNotes(user)) {
+      setReadyPickupCount(0)
+      return
+    }
+    try {
+      const data = await ordersApi.issueNotes({ status: 'ready_pickup', page_size: 1 })
+      setReadyPickupCount(Number(normalizeListResponse(data).count || 0))
+    } catch {
+      setReadyPickupCount(0)
+    }
+  }, [user])
+
   useEffect(() => {
     if (!canViewNotifications(user)) {
       setUnreadCount(0)
@@ -84,6 +100,20 @@ export default function Layout() {
       clearInterval(timer)
     }
   }, [user, pullUnreadCount])
+
+  useEffect(() => {
+    pullReadyPickupCount()
+    const timer = setInterval(pullReadyPickupCount, 30000)
+    return () => clearInterval(timer)
+  }, [pullReadyPickupCount])
+
+  useEffect(() => {
+    const onIssueNotesChanged = () => {
+      pullReadyPickupCount()
+    }
+    window.addEventListener('issue-notes:changed', onIssueNotesChanged)
+    return () => window.removeEventListener('issue-notes:changed', onIssueNotesChanged)
+  }, [pullReadyPickupCount])
 
   useEffect(() => {
     const onNotificationsChanged = () => {
@@ -128,25 +158,42 @@ export default function Layout() {
         </Link>
 
         <nav className={styles.nav} aria-label="Main">
-          {visibleNav.map(({ to, key, icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => (isActive ? styles.navActive : styles.navLink)}
-              end={to === '/'}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <span className={styles.navIcon}>
-                <IconNav name={icon} size={19} />
-              </span>
-              <span className={styles.navLabelWrap}>
-                <span className={styles.navLabel}>{t(`nav.${key}`)}</span>
-                {key === 'notifications' && unreadCount > 0 ? (
-                  <span className={styles.navBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
-                ) : null}
-              </span>
-            </NavLink>
-          ))}
+          {visibleNav.map(({ to, key, icon }) => {
+            const navTo =
+              key === 'issueNotes' && isForeman(user) && readyPickupCount > 0
+                ? '/issue-notes?status=ready_pickup'
+                : to
+            const showPickupBadge = key === 'issueNotes' && isForeman(user) && readyPickupCount > 0
+            return (
+              <NavLink
+                key={key}
+                to={navTo}
+                className={({ isActive }) => (isActive ? styles.navActive : styles.navLink)}
+                end={to === '/'}
+                title={
+                  showPickupBadge
+                    ? t('layout.readyPickupNavTitle', { count: readyPickupCount })
+                    : undefined
+                }
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className={styles.navIcon}>
+                  <IconNav name={icon} size={19} />
+                </span>
+                <span className={styles.navLabelWrap}>
+                  <span className={styles.navLabel}>{t(`nav.${key}`)}</span>
+                  {key === 'notifications' && unreadCount > 0 ? (
+                    <span className={styles.navBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  ) : null}
+                  {showPickupBadge ? (
+                    <span className={styles.navBadgePickup}>
+                      {readyPickupCount > 99 ? '99+' : readyPickupCount}
+                    </span>
+                  ) : null}
+                </span>
+              </NavLink>
+            )
+          })}
         </nav>
 
         <div className={styles.sidebarFooter}>
@@ -183,6 +230,17 @@ export default function Layout() {
           <div className={styles.topbarActions}>
             <LanguageSelect />
             <ThemeToggle />
+            {isForeman(user) && canViewIssueNotes(user) && readyPickupCount > 0 ? (
+              <Link
+                to="/issue-notes?status=ready_pickup"
+                className={styles.pickupBtn}
+                title={t('layout.readyPickupTitle', { count: readyPickupCount })}
+                aria-label={t('layout.readyPickupTitle', { count: readyPickupCount })}
+              >
+                <IconNav name="receipts" size={18} />
+                <span className={styles.pickupBadge}>{readyPickupCount > 99 ? '99+' : readyPickupCount}</span>
+              </Link>
+            ) : null}
             {canViewNotifications(user) && (
               <Link to="/notifications" className={styles.notificationsBtn} title={t('notifications.title')}>
                 <IconNav name="notifications" size={18} />

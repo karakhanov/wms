@@ -173,6 +173,26 @@ def managers_list(request):
     return Response(data)
 
 
+@api_view(["GET"])
+@permission_classes([permissions.IsAuthenticated])
+def controllers_list(request):
+    rows = (
+        User.objects.filter(role__name=Role.Name.WAREHOUSE_CONTROLLER, is_active=True)
+        .only("id", "username", "full_name")
+        .order_by("username")
+    )
+    data = [
+        {
+            "id": u.id,
+            "username": u.username,
+            "full_name": u.full_name,
+            "display_name": (u.full_name or "").strip() or u.username,
+        }
+        for u in rows
+    ]
+    return Response(data)
+
+
 def is_admin_or_manager(user):
     if not user.is_authenticated:
         return False

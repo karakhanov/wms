@@ -120,6 +120,57 @@ export const orders = {
   issueNoteCreate: (data) => api.post('/orders/issue-notes/', data).then((r) => r.data),
   issueNoteGet: (id) => api.get(`/orders/issue-notes/${id}/`).then((r) => r.data),
   issueNoteUpdate: (id, data) => api.patch(`/orders/issue-notes/${id}/`, data).then((r) => r.data),
+  issueNoteSendToProcurement: (id, data) =>
+    api.post(`/orders/issue-notes/${id}/send-to-procurement/`, data).then((r) => r.data),
+  issueNoteProcurementDecline: (id, data) =>
+    api.post(`/orders/issue-notes/${id}/procurement-decline/`, data).then((r) => r.data),
+  issueNoteProcurementProceed: (id) =>
+    api.post(`/orders/issue-notes/${id}/procurement-proceed/`).then((r) => r.data),
+  issueNoteGoodsArrived: (id) =>
+    api.post(`/orders/issue-notes/${id}/goods-arrived/`).then((r) => r.data),
+  issueNoteProcurementDetails: (id, data) => {
+    const scan = data?.procurement_scan
+    if (scan instanceof File) {
+      const fd = new FormData()
+      ;[
+        'procurement_purchase_date',
+        'procurement_amount',
+        'procurement_quantity_note',
+        'procurement_vehicle',
+        'procurement_delivery_notes',
+      ].forEach((k) => {
+        if (data[k] !== undefined && data[k] !== null && data[k] !== '') fd.append(k, data[k])
+      })
+      if (data.procurement_supplier != null && data.procurement_supplier !== '') {
+        fd.append('procurement_supplier', String(data.procurement_supplier))
+      }
+      if (Array.isArray(data.procurement_item_ids)) {
+        fd.append('procurement_item_ids', JSON.stringify(data.procurement_item_ids))
+      }
+      fd.append('procurement_scan', scan)
+      return api
+        .post(`/orders/issue-notes/${id}/procurement-details/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        .then((r) => r.data)
+    }
+    return api.post(`/orders/issue-notes/${id}/procurement-details/`, data).then((r) => r.data)
+  },
+  issueNoteAssignInspection: (id, body) =>
+    api.post(`/orders/issue-notes/${id}/assign-inspection/`, body).then((r) => r.data),
+  issueNoteControllerComplete: (id, { lines, filesByItemId }) => {
+    const fd = new FormData()
+    fd.append('lines', JSON.stringify(lines))
+    const map = filesByItemId || {}
+    Object.keys(map).forEach((itemId) => {
+      const files = map[itemId]
+      if (!Array.isArray(files)) return
+      files.forEach((f) => {
+        if (f instanceof File) fd.append(`photos_${itemId}`, f)
+      })
+    })
+    return api
+      .post(`/orders/issue-notes/${id}/controller-complete/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+      .then((r) => r.data)
+  },
 }
 
 export const stock = {
@@ -167,6 +218,7 @@ export const users = {
   update: (id, data) => api.patch(`/auth/users/${id}/`, data).then((r) => r.data),
   assignObjects: (id, assigned_objects) => api.post(`/auth/users/${id}/assign-objects/`, { assigned_objects }).then((r) => r.data),
   managers: () => api.get('/auth/managers/').then((r) => r.data),
+  controllers: () => api.get('/auth/controllers/').then((r) => r.data),
   activity: (data) => api.post('/auth/activity/', data).then((r) => r.data),
   actionLog: (params) => api.get('/auth/action-log/', { params }).then((r) => r.data),
   actionLogFacets: () => api.get('/auth/action-log/facets/').then((r) => r.data),

@@ -1,6 +1,6 @@
 """
 Управление пользователями: учётные записи, роли, журнал действий.
-Роли: Администратор, Менеджер, Кладовщик.
+Роли: администратор, менеджер, кладовщик, прораб, снабжение, контролёр склада.
 """
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -45,12 +45,14 @@ class AuditModel(models.Model):
 
 
 class Role(AuditModel):
-    """Роль пользователя: Администратор, Менеджер, Кладовщик."""
+    """Роль пользователя: Администратор, Менеджер, Кладовщик, прораб, снабжение, контролёр."""
     class Name(models.TextChoices):
         ADMIN = "admin", "Администратор"
         MANAGER = "manager", "Менеджер"
         STOREKEEPER = "storekeeper", "Кладовщик"
         FOREMAN = "foreman", "Прораб"
+        PROCUREMENT = "procurement", "Снабженец"
+        WAREHOUSE_CONTROLLER = "warehouse_controller", "Контролёр склада"
 
     name = models.CharField(max_length=50, unique=True)
 

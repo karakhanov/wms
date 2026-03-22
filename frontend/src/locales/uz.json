@@ -5,7 +5,9 @@
   },
   "layout": {
     "version": "Versiya {{version}}",
-    "sidebarHint": "Bashkent korporativ ombor hisobi"
+    "sidebarHint": "Bashkent korporativ ombor hisobi",
+    "readyPickupTitle": "Berishga tayyor nakladnoylar: {{count}}",
+    "readyPickupNavTitle": "Berishga tayyor: {{count}}"
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",
@@ -326,6 +328,10 @@
     "noRemaining": "So'rovda beriladigan qoldiq yo'q.",
     "createError": "Nakladnoyni yaratib bo'lmadi.",
     "noAccess": "Nakladnoylarni ko'rish uchun ruxsat yo'q.",
+    "listLoadError": "Nakladnalar ro'yxati yuklanmadi.",
+    "emptyList": "Hozircha nakladnalar yo'q.",
+    "emptyFiltered": "Joriy filtrlarga mos yozuvlar yo'q. Status, qidiruv yoki sanani tozalang.",
+    "foremanListHint": "Siz yaratgan nakladnalar va profilingizdagi obyektlar bo'yicha nakladnalar ko'rinadi.",
     "categories": "Toifalar",
     "products": "Mahsulotlar",
     "sender": "Yuboruvchining F.I.Sh.",
@@ -340,12 +346,67 @@
     "shortageQty": "Yetishmaydi",
     "hoverShortageTitle": "Xato: qoldiq yetarli emas",
     "submittedStatusLabel": "Ko‘rib chiqilmoqda",
+    "statusAwaitingProcurement": "Ta'minotda",
+    "statusProcurementActive": "Xarid",
+    "statusAwaitCtrlPick": "Tovar keldi — kontrol tanlash",
+    "statusAwaitingController": "Qabul kutmoqda",
+    "statusAwaitingRelease": "Ombordan berish kutmoqda",
+    "statusPicking": "Yig'ilmoqda",
+    "statusReadyPickup": "Berishga tayyor",
+    "statusReceivedForeman": "Prorab oldi",
+    "sendToProcurement": "Ta'minotga yuborish",
+    "procurementNotesPrompt": "Ta'minot uchun izoh (yetishmovchilik va hokazo)",
+    "procurementProceed": "Xaridni boshlash",
+    "procurementDecline": "Ta'minot rad etishi",
+    "goodsArrived": "Tovar keldi",
+    "controllerComplete": "Qabulni yakunlash",
+    "actualQty": "Fakt",
+    "photoUrlsHint": "Rasm havolalari, vergul bilan",
+    "photosCol": "Rasm",
+    "startPicking": "Yig'ishni boshlash",
+    "markReadyPickup": "Tayyor deb belgilash",
+    "confirmReceived": "Oldim",
+    "procurementNotesLabel": "Ta'minot",
     "rejectCommentPrompt": "Rad etish sababini kiriting",
     "rejectCommentRequired": "Rad etish sababi majburiy.",
     "rejectCommentLabel": "Rad etish sababi",
     "shortageFilterAll": "Yetishmovchilik: barchasi",
     "shortageFilterWith": "Faqat yetishmovchilik bor",
-    "shortageFilterWithout": "Yetishmovchiliksiz"
+    "shortageFilterWithout": "Yetishmovchiliksiz",
+    "procurementDetailsTitle": "Xarid va yetkazib berish",
+    "procurementDetailsReadonly": "Xarid",
+    "procurementPurchaseDate": "Xarid sanasi",
+    "procurementAmount": "Summa",
+    "procurementQtyNote": "Miqdor (izoh)",
+    "procurementCounterparty": "Kontragent",
+    "procurementFillForm": "Formani to‘ldiring.",
+    "procurementSupplierSearchPlaceholder": "Nom, STIR, kontakt bo‘yicha qidiruv…",
+    "procurementNoSupplierMatch": "Mos yetkazib beruvchi yo‘q — qidiruvni aniqlashtiring yoki yangisini qo‘shing.",
+    "procurementNoSuppliersInDirectory": "Hozircha yetkazib beruvchilar yo‘q — «Yangi yetkazib beruvchi» ni bosing.",
+    "procurementSupplier": "Yetkazib beruvchi (ma'lumotnoma)",
+    "procurementSupplierPlaceholder": "— tanlanmagan —",
+    "procurementAddSupplier": "Yangi yetkazib beruvchi",
+    "procurementNewSupplierName": "Yetkazib beruvchi nomi",
+    "procurementSupplierNameRequired": "Yetkazib beruvchi nomini kiriting.",
+    "procurementLinesTitle": "Bu yetkazib berish qamrab oladigan pozitsiyalar",
+    "procurementLinesPickHint": "Bir nechta mahsulot turlari: qaysi qatorlar bu jo‘natmaga tegishli ekanini belgilang.",
+    "procurementLinesAutoHint": "Xarid uchun qatorlar avtomatik tanlanadi (bitta qator, bitta mahsulot turi yoki faqat bitta tur bo‘yicha yetishmovchilik).",
+    "procurementLinesReadonly": "Jo‘natmadagi pozitsiyalar",
+    "procurementLineCount": "qator",
+    "procurementVehicle": "Transport",
+    "procurementDeliveryNotes": "Yetkazib berish / marshrut",
+    "procurementScanFile": "Hujjat skani",
+    "procurementScanLink": "Skanni ochish",
+    "assignControllersTitle": "Qabul uchun kontrollerlar",
+    "assignControllersHint": "Bir yoki bir nechta kontrolni tanlang — ularga bildirishnoma boradi.",
+    "assignControllersRequired": "Kamida bitta kontrolni tanlang.",
+    "assignAndNotify": "Tayinlash va xabar berish",
+    "rowQuickAssign": "Tanlash",
+    "noControllers": "Kontrol roli bo'lgan foydalanuvchilar yo'q.",
+    "inspectionCommentCol": "Qabul izohi",
+    "inspectionPhotosPick": "Rasmlar",
+    "inspectionLineComment": "Izoh",
+    "filesPicked": "fayl"
   },
   "objects": {
     "title": "Qurilish obyektlari",
@@ -377,7 +438,14 @@
     "types": {
       "issue_note_submitted": "Nakladnoy yuborildi",
       "issue_note_approved": "Nakladnoy tasdiqlandi",
-      "issue_note_rejected": "Nakladnoy rad etildi"
+      "issue_note_rejected": "Nakladnoy rad etildi",
+      "issue_note_sent_procurement": "Ta'minotda",
+      "issue_note_procurement_declined": "Ta'minot rad etdi",
+      "issue_note_goods_for_inspection": "Qabul uchun tovar",
+      "issue_note_assign_controllers": "Kontrollarni tayinlash",
+      "issue_note_inspection_done": "Qabul tugadi",
+      "issue_note_ready_pickup": "Berishga tayyor",
+      "issue_note_received_foreman": "Prorab oldi"
     },
     "templates": {
       "issue_note_submitted": {
@@ -391,6 +459,34 @@
       "issue_note_rejected": {
         "title": "Nakladnoy rad etildi: {{number}}",
         "message": "{{number}} nakladnoy holati rad etilgan deb o'zgardi."
+      },
+      "issue_note_sent_procurement": {
+        "title": "Ta'minotda: {{number}}",
+        "message": "{{number}} nakladnoy ta'minotga yuborildi."
+      },
+      "issue_note_procurement_declined": {
+        "title": "Ta'minot rad etdi: {{number}}",
+        "message": "Ta'minot {{number}} nakladnoyni ta'minlay olmaydi."
+      },
+      "issue_note_goods_for_inspection": {
+        "title": "Qabul: {{number}}",
+        "message": "{{number}} nakladnoy bo'yicha tovar kontrol tekshiruvini kutmoqda."
+      },
+      "issue_note_assign_controllers": {
+        "title": "Kontrollarni tanlang: {{number}}",
+        "message": "{{number}} nakladnoy bo'yicha tovar keldi. Qabul uchun kontrollarni tanlang."
+      },
+      "issue_note_inspection_done": {
+        "title": "Qabul tugadi: {{number}}",
+        "message": "Kontrol {{number}} nakladnoy bo'yicha qabulni yakunladi."
+      },
+      "issue_note_ready_pickup": {
+        "title": "Berishga tayyor: {{number}}",
+        "message": "{{number}} nakladnoy yig'ildi, olish mumkin."
+      },
+      "issue_note_received_foreman": {
+        "title": "Prorab oldi: {{number}}",
+        "message": "Prorab {{number}} nakladnoy bo'yicha olishni tasdiqladi."
       }
     }
   },

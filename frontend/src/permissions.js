@@ -1,4 +1,11 @@
-const ROLES = { admin: 'admin', manager: 'manager', storekeeper: 'storekeeper', foreman: 'foreman' }
+const ROLES = {
+  admin: 'admin',
+  manager: 'manager',
+  storekeeper: 'storekeeper',
+  foreman: 'foreman',
+  procurement: 'procurement',
+  warehouse_controller: 'warehouse_controller',
+}
 
 export function getRole(user) {
   if (!user) return null
@@ -22,6 +29,14 @@ export function isStorekeeper(user) {
 
 export function isForeman(user) {
   return getRole(user) === ROLES.foreman
+}
+
+export function isProcurement(user) {
+  return getRole(user) === ROLES.procurement
+}
+
+export function isWarehouseController(user) {
+  return getRole(user) === ROLES.warehouse_controller
 }
 
 function canByRbac(user, resource, action) {
@@ -149,10 +164,22 @@ export function canViewReports(user) {
   })
 }
 
+/** Красная подсветка нехватки в списке, подсказки и блок «Остатки по товарам» в карточке накладной */
+export function canViewIssueNoteShortageHints(user) {
+  return isAdmin(user) || isManager(user) || isProcurement(user)
+}
+
 export function canViewIssueNotes(user) {
   return withFallback(user, 'issue_notes', 'read', () => {
     const r = getRole(user)
-    return r === ROLES.admin || r === ROLES.manager || r === ROLES.storekeeper || r === ROLES.foreman
+    return (
+      r === ROLES.admin ||
+      r === ROLES.manager ||
+      r === ROLES.storekeeper ||
+      r === ROLES.foreman ||
+      r === ROLES.procurement ||
+      r === ROLES.warehouse_controller
+    )
   })
 }
 
@@ -178,5 +205,69 @@ export function canCreateIssueNotes(user) {
 
 export function canApproveIssueNotes(user) {
   const r = getRole(user)
-  return r === ROLES.admin || r === ROLES.manager
+  if (r !== ROLES.admin && r !== ROLES.manager) return false
+  return withFallback(user, 'issue_notes', 'write', () => true)
+}
+
+export function canSendIssueNoteToProcurement(user) {
+  return canApproveIssueNotes(user)
+}
+
+/** Операции снабжения по накладной (взять в закупку, отказ, приход, реквизиты) — только роль снабжения; админ — полный доступ */
+export function canProcurementIssueNote(user) {
+  if (!isProcurement(user) && !isAdmin(user)) return false
+  return withFallback(user, 'issue_notes', 'write', () => true)
+}
+
+/** Приёмка накладной — контролёр или админ (не менеджер) */
+export function canControllerIssueNote(user) {
+  if (!isWarehouseController(user) && !isAdmin(user)) return false
+  return withFallback(user, 'issue_notes', 'write', () => true)
+}
+
+/** Сборка и готовность к выдаче — только кладовщик; админ — полный доступ */
+export function canStorekeeperIssueNoteFlow(user) {
+  if (!isStorekeeper(user) && !isAdmin(user)) return false
+  return withFallback(user, 'issue_notes', 'write', () => true)
+}
+
+/** Прораб (роль); для кнопки «Получил» см. canForemanConfirmIssueNote */
+export function canForemanConfirmIssueReceipt(user) {
+  return isForeman(user)
+}
+
+/** Одобрение накладной на бэкенде списывает остатки — скрываем кнопку при известной нехватке */
+export function issueNoteApproveBlockedByShortage(note, shortageById) {
+  if (!note?.id || !shortageById) return false
+  return Boolean(shortageById[String(note.id)])
+}
+
+export function canShowIssueNoteApproveButton(user, note, shortageById, canSeeShortageHints) {
+  if (!canApproveIssueNotes(user) || !note) return false
+  if (note.status !== 'submitted' && note.status !== 'awaiting_release') return false
+  if (canSeeShortageHints && issueNoteApproveBlockedByShortage(note, shortageById)) return false
+  return true
+}
+
+/** Соответствует проверке приёмки на бэкенде (назначенный контролёр / админ / legacy) */
+export function canUserInspectIssueNote(user, note) {
+  if (!user || !note) return false
+  if (user.is_superuser) return true
+  if (isAdmin(user)) return true
+  if (!isWarehouseController(user)) return false
+  const ids = note.inspection_invited_user_ids
+  if (!Array.isArray(ids) || ids.length === 0) return true
+  const uid = Number(user.id)
+  if (!Number.isFinite(uid)) return false
+  return ids.map((x) => Number(x)).includes(uid)
+}
+
+/** Прораб может подтвердить только свою накладную */
+export function canForemanConfirmIssueNote(user, note) {
+  if (!isForeman(user) || !note) return false
+  const uid = Number(user.id)
+  const created = note.created_by
+  if (created == null || created === '') return false
+  const cid = typeof created === 'object' && created !== null ? Number(created.id) : Number(created)
+  return Number.isFinite(cid) && cid === uid
 }

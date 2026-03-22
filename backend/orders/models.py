@@ -2,6 +2,7 @@
 Отгрузка товара: заказ, список для сборки, сканирование при сборке,
 списание со склада, статусы (Создан, Собирается, Отправлен).
 """
+from django.conf import settings
 from django.db import models
 from users.models import AuditModel
 from products.models import Product
@@ -99,11 +100,19 @@ class IssueNote(AuditModel):
 
     class Status(models.TextChoices):
         SUBMITTED = "submitted", "На согласовании"
+        AWAITING_PROCUREMENT = "awaiting_procurement", "У снабжения"
+        PROCUREMENT_ACTIVE = "procurement_active", "Закупка"
+        AWAIT_CTRL_PICK = "await_ctrl_pick", "Товар прибыл — назначить контролёра"
+        AWAITING_CONTROLLER = "awaiting_controller", "Ожидает приёмку"
+        AWAITING_RELEASE = "awaiting_release", "Ожидает выдачу со склада"
         APPROVED = "approved", "Одобрена"
+        PICKING = "picking", "Собирается"
+        READY_PICKUP = "ready_pickup", "Готов к выдаче"
+        RECEIVED_FOREMAN = "received_foreman", "Прораб получил"
         REJECTED = "rejected", "Отклонена"
 
     number = models.CharField("Номер накладной", max_length=50, unique=True)
-    status = models.CharField(max_length=20, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
+    status = models.CharField(max_length=24, choices=Status.choices, default=Status.SUBMITTED, db_index=True)
     request = models.ForeignKey(
         MaterialRequest, on_delete=models.PROTECT, related_name="issue_notes", null=True, blank=True
     )
@@ -117,6 +126,23 @@ class IssueNote(AuditModel):
     )
     recipient_name = models.CharField("Получатель", max_length=255)
     comment = models.TextField(blank=True)
+    procurement_notes = models.TextField("Комментарий по снабжению", blank=True)
+    procurement_purchase_date = models.DateField("Дата закупки", null=True, blank=True)
+    procurement_amount = models.DecimalField("Сумма закупки", max_digits=14, decimal_places=2, null=True, blank=True)
+    procurement_quantity_note = models.CharField("Количество (комментарий)", max_length=255, blank=True)
+    procurement_counterparty = models.CharField("Контрагент (текст)", max_length=255, blank=True)
+    procurement_supplier = models.ForeignKey(
+        "receipts.Supplier",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="issue_notes",
+        verbose_name="Поставщик из справочника",
+    )
+    procurement_item_ids = models.JSONField("Позиции накладной под закупку (id строк)", default=list, blank=True)
+    procurement_vehicle = models.CharField("Транспорт / машина", max_length=255, blank=True)
+    procurement_delivery_notes = models.TextField("Как везут, маршрут и т.д.", blank=True)
+    procurement_scan = models.FileField("Скан документа", upload_to="procurement_scans/%Y/%m/", blank=True, null=True)
     rejection_comment = models.TextField("Причина отказа", blank=True)
     approved_by = models.ForeignKey(
         "users.User",
@@ -127,6 +153,13 @@ class IssueNote(AuditModel):
         verbose_name="Кто одобрил",
     )
     approved_at = models.DateTimeField("Дата одобрения", null=True, blank=True)
+
+    inspection_invited_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="issue_notes_assigned_inspection",
+        verbose_name="Контролёры на приёмку",
+    )
 
     class Meta:
         verbose_name = "Накладная выдачи"
@@ -145,6 +178,11 @@ class IssueNoteItem(AuditModel):
     )
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="issue_note_items")
     quantity = models.DecimalField("Количество", max_digits=14, decimal_places=3)
+    actual_quantity = models.DecimalField(
+        "Фактически принято", max_digits=14, decimal_places=3, null=True, blank=True
+    )
+    inspection_photos = models.JSONField("Фото приёмки (URL)", default=list, blank=True)
+    inspection_comment = models.TextField("Комментарий при приёмке", blank=True)
     comment = models.TextField("Комментарий", blank=True)
     cell = models.ForeignKey(
         Cell, on_delete=models.SET_NULL, null=True, blank=True, related_name="issue_note_items"

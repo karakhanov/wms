@@ -54,12 +54,16 @@ class Command(BaseCommand):
         role_manager, _ = Role.objects.get_or_create(name=Role.Name.MANAGER)
         role_sk, _ = Role.objects.get_or_create(name=Role.Name.STOREKEEPER)
         role_foreman, _ = Role.objects.get_or_create(name=Role.Name.FOREMAN)
+        role_proc, _ = Role.objects.get_or_create(name=Role.Name.PROCUREMENT)
+        role_ctrl, _ = Role.objects.get_or_create(name=Role.Name.WAREHOUSE_CONTROLLER)
 
         users_data = [
             ("admin", "admin123", "Администратор Системы", role_admin),
             ("manager", "manager123", "Менеджер Иванов", role_manager),
             ("storekeeper", "sk123", "Кладовщик Петров", role_sk),
             ("foreman", "foreman123", "Прораб Сидоров", role_foreman),
+            ("procurement", "procurement123", "Снабженец (тест)", role_proc),
+            ("controller", "controller123", "Контролёр склада (тест)", role_ctrl),
         ]
         for username, password, full_name, role in users_data:
             user, created = User.objects.get_or_create(
@@ -73,7 +77,10 @@ class Command(BaseCommand):
                 objs = list(ConstructionObject.objects.all()[:1])
                 if objs:
                     user.assigned_objects.set(objs)
-        self.stdout.write("  Пользователи: admin/admin123, manager/manager123, storekeeper/sk123, foreman/foreman123")
+        self.stdout.write(
+            "  Пользователи: admin/admin123, manager/manager123, storekeeper/sk123, foreman/foreman123, "
+            "procurement/procurement123, controller/controller123"
+        )
 
     def _create_categories_and_products(self):
         from products.models import Category, Product

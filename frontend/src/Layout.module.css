@@ -172,6 +172,46 @@ html[data-theme='dark'] .topbar {
   min-width: 0;
 }
 
+.pickupBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  margin-right: 0.35rem;
+  color: var(--text);
+  background: rgba(63, 185, 80, 0.14);
+  border: 1px solid rgba(63, 185, 80, 0.45);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+}
+
+.pickupBtn:hover {
+  background: rgba(63, 185, 80, 0.22);
+  border-color: rgba(63, 185, 80, 0.65);
+}
+
+.pickupBadge {
+  position: absolute;
+  top: -0.38rem;
+  right: -0.38rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: #3fb950;
+  color: #0d1117;
+  font-size: 0.66rem;
+  line-height: 1.15rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+html[data-theme='light'] .pickupBadge {
+  color: #fff;
+}
+
 .notificationsBtn {
   position: relative;
   display: inline-flex;
@@ -376,6 +416,23 @@ html[data-theme='light'] .profileAvatar {
   line-height: 1.15rem;
   text-align: center;
   font-weight: 700;
+}
+
+.navBadgePickup {
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #3fb950;
+  color: #0d1117;
+  font-size: 0.66rem;
+  line-height: 1.15rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+html[data-theme='light'] .navBadgePickup {
+  color: #fff;
 }
 
 .sidebarCollapsed .navLabelWrap {
