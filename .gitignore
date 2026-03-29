@@ -34,3 +34,8 @@ Thumbs.db
 ## Secrets
 .env
 .env.*
+
+## Local DB/media exports (do not commit)
+wms_backup.dump
+wms_backup_*.dump
+wms_media_export.zip
