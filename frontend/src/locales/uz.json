@@ -201,10 +201,17 @@
   },
   "stock": {
     "title": "Qoldiqlar",
-    "lead": "Hujayralar boʻyicha joriy qoldiqlar.",
+    "lead": "Mahsulotlar bo‘yicha qoldiq: rasm, SKU, shtrixkod, ombor va zona. Ombor filtri va qidiruv — mahsulotlar ro‘yxatiga o‘xshash.",
     "product": "Mahsulot (SKU)",
+    "warehouse": "Ombor",
+    "zone": "Zona",
+    "rack": "Stellaj",
     "cell": "Hujayra",
-    "quantity": "Miqdor"
+    "quantity": "Miqdor",
+    "updatedAt": "Yangilangan",
+    "emptyList": "Hozircha qoldiq yozuvlari yo‘q.",
+    "emptyFiltered": "Qidiruv yoki ombor filtri bo‘yicha qatorlar topilmadi.",
+    "loadError": "Qoldiqlarni yuklab bo‘lmadi. Tarmoq va ruxsatlarni tekshiring."
   },
   "transfers": {
     "title": "Koʻchirish",
@@ -307,7 +314,7 @@
   },
   "issueNotes": {
     "title": "Berish nakladnoylari",
-    "lead": "Prorab nakladnoyni darhol kelishuvga yuboradi, menejer yoki administrator tasdiqlaydi/rad etadi, qoldiq faqat tasdiqdan keyin yechiladi.",
+    "lead": "Prorab nakladnoyni kelishuvga yuboradi, menejer tasdiqlaydi yoki rad etadi. Tasdiqdan keyin omborchilarga bildirishnoma boradi — ular yig‘ishni boshlaydi, keyin «Berishga tayyor»; prorab bildirishnoma oladi va «Oldim» bilan nakladnoy yopiladi. Qoldiq menejer tasdiqlaganda yechiladi.",
     "id": "№",
     "number": "Raqam",
     "request": "Asos",
@@ -322,6 +329,8 @@
     "date": "Sana",
     "create": "Nakladnoy yaratish",
     "approve": "Tasdiqlash",
+    "approveBlockedByShortage": "Tasdiqlab bo‘lmaydi: qabul qilingan (yoki so‘ralgan) miqdor uchun omborda yetarli qoldiq yo‘q. Faktni kamaytiring yoki omborni to‘ldiring.",
+    "storekeeperAwaitManagerApprove": "Hozir navbat menejerda: qabuldan keyin nakladnani tasdiqlashi kerak. «Tasdiqlangan» bo‘lganda omborchilarga bildirishnoma boradi — bu yerda «Yig‘ishni boshlash» va «Berishga tayyor» tugmalari paydo bo‘ladi.",
     "reject": "Rad etish",
     "validation": "Obyekt, qabul qiluvchi va nakladnoy satrlarini to'ldiring.",
     "requestRequired": "Tasdiqlangan so'rovni tanlang.",
@@ -350,10 +359,19 @@
     "statusProcurementActive": "Xarid",
     "statusAwaitCtrlPick": "Tovar keldi — kontrol tanlash",
     "statusAwaitingController": "Qabul kutmoqda",
+    "statusWarehouseReceived": "Tovar omborga qabul qilindi (nakladnoya yopildi)",
+    "placementWarehouse": "Ombor",
+    "placementZone": "Zona",
+    "placementCell": "Katak",
+    "placementWarehousePlaceholder": "— ombor —",
+    "placementZonePlaceholder": "— zona —",
+    "placementCellPlaceholder": "— katak —",
+    "placementRequired": "Fakt miqdori noldan katta bo‘lgan qatorlar uchun ombor va zonani tanlang.",
     "statusAwaitingRelease": "Ombordan berish kutmoqda",
     "statusPicking": "Yig'ilmoqda",
     "statusReadyPickup": "Berishga tayyor",
     "statusReceivedForeman": "Prorab oldi",
+    "statusNoteCompleted": "Yakunlangan",
     "sendToProcurement": "Ta'minotga yuborish",
     "procurementNotesPrompt": "Ta'minot uchun izoh (yetishmovchilik va hokazo)",
     "procurementProceed": "Xaridni boshlash",
@@ -440,10 +458,14 @@
       "issue_note_approved": "Nakladnoy tasdiqlandi",
       "issue_note_rejected": "Nakladnoy rad etildi",
       "issue_note_sent_procurement": "Ta'minotda",
+      "issue_note_foreman_procurement_shortage": "Yetishmovchilik → ta'minot (prorab)",
+      "issue_note_foreman_procurement_goods_in": "Xarid qabul qilindi (prorab)",
       "issue_note_procurement_declined": "Ta'minot rad etdi",
       "issue_note_goods_for_inspection": "Qabul uchun tovar",
       "issue_note_assign_controllers": "Kontrollarni tayinlash",
       "issue_note_inspection_done": "Qabul tugadi",
+      "issue_note_foreman_warehouse_received": "Tovar omborda (prorab)",
+      "issue_note_storekeeper_start_picking": "Yig‘ishni boshlash (omborchi)",
       "issue_note_ready_pickup": "Berishga tayyor",
       "issue_note_received_foreman": "Prorab oldi"
     },
@@ -464,6 +486,14 @@
         "title": "Ta'minotda: {{number}}",
         "message": "{{number}} nakladnoy ta'minotga yuborildi."
       },
+      "issue_note_foreman_procurement_shortage": {
+        "title": "Yetishmovchilik ta'minotga: {{number}}",
+        "message": "Sizning {{number}} nakladnoyingiz omborda yetishmovchilik sababli ta'minotga yuborildi."
+      },
+      "issue_note_foreman_procurement_goods_in": {
+        "title": "Xarid qabul qilindi: {{number}}",
+        "message": "{{number}} nakladnoy bo'yicha xarid qilingan tovar qabul qilindi — menejer berishni tasdiqlashi mumkin."
+      },
       "issue_note_procurement_declined": {
         "title": "Ta'minot rad etdi: {{number}}",
         "message": "Ta'minot {{number}} nakladnoyni ta'minlay olmaydi."
@@ -479,6 +509,14 @@
       "issue_note_inspection_done": {
         "title": "Qabul tugadi: {{number}}",
         "message": "Kontrol {{number}} nakladnoy bo'yicha qabulni yakunladi."
+      },
+      "issue_note_storekeeper_start_picking": {
+        "title": "Yig‘ishni boshlash: {{number}}",
+        "message": "{{number}} nakladnoy ({{object_name}}) tasdiqlandi. Oching, «Yig‘ishni boshlash», tayyor bo‘lsa — «Berishga tayyor» ni bosing."
+      },
+      "issue_note_foreman_warehouse_received": {
+        "title": "Tovar omborga qabul qilindi: {{number}}",
+        "message": "{{number}} nakladnoy ({{object_name}}) bo'yicha materiallar omborga qabul qilindi. Nakladnoya yopildi. Agar tovarlar hali ham kerak bo'lsa — yangi nakladnoya yarating."
       },
       "issue_note_ready_pickup": {
         "title": "Berishga tayyor: {{number}}",

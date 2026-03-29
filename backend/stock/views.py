@@ -3,16 +3,20 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Sum
 from users.mixins import SetAuditUserMixin
-from users.permissions import ManagerStorekeeper
+from users.permissions import ManagerStorekeeper, StockBalanceRead
 from .models import StockBalance, MinStockLevel
 from .serializers import StockBalanceSerializer, MinStockLevelSerializer
 
 
 class StockBalanceViewSet(SetAuditUserMixin, viewsets.ReadOnlyModelViewSet):
     """Просмотр остатков, поиск товара на складе."""
-    queryset = StockBalance.objects.filter(quantity__gt=0).select_related("product", "cell__rack__zone__warehouse")
+    queryset = StockBalance.objects.filter(quantity__gt=0).select_related(
+        "product",
+        "product__category",
+        "cell__rack__zone__warehouse",
+    )
     serializer_class = StockBalanceSerializer
-    permission_classes = [ManagerStorekeeper]
+    permission_classes = [StockBalanceRead]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ("product", "cell", "cell__rack__zone__warehouse")
     search_fields = (

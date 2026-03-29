@@ -105,11 +105,11 @@ class IssueNote(AuditModel):
         AWAIT_CTRL_PICK = "await_ctrl_pick", "Товар прибыл — назначить контролёра"
         AWAITING_CONTROLLER = "awaiting_controller", "Ожидает приёмку"
         AWAITING_RELEASE = "awaiting_release", "Ожидает выдачу со склада"
+        WAREHOUSE_RECEIVED_CLOSED = "warehouse_received", "Товар принят на склад (накладная закрыта)"
         APPROVED = "approved", "Одобрена"
         PICKING = "picking", "Собирается"
         READY_PICKUP = "ready_pickup", "Готов к выдаче"
-        RECEIVED_FOREMAN = "received_foreman", "Прораб получил"
-        REJECTED = "rejected", "Отклонена"
+        NOTE_COMPLETED = "note_completed", "Завершена"
 
     number = models.CharField("Номер накладной", max_length=50, unique=True)
     status = models.CharField(max_length=24, choices=Status.choices, default=Status.SUBMITTED, db_index=True)

@@ -7,6 +7,7 @@ import PaginationBar from '../components/PaginationBar'
 import { downloadCsv } from '../utils/csvExport'
 import { totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+import { formatQuantity } from '../utils/formatQuantity'
 import styles from './Table.module.css'
 
 function matchSearch(row, q, fields) {
@@ -116,8 +117,8 @@ export default function Reports() {
       [t('stock.product'), t('reports.minQty'), t('reports.current')],
       filteredShortage.map((s) => [
         `${s.product_sku || ''} — ${s.product_name || ''}`,
-        s.min_quantity,
-        s.current,
+        formatQuantity(s.min_quantity),
+        formatQuantity(s.current),
       ])
     )
   }
@@ -126,7 +127,7 @@ export default function Reports() {
     downloadCsv(
       `popular_${new Date().toISOString().slice(0, 10)}`,
       [t('stock.product'), t('reports.shipped')],
-      sortedPopular.map((p) => [`${p.product_sku || ''} — ${p.product_name || ''}`, p.total_qty])
+      sortedPopular.map((p) => [`${p.product_sku || ''} — ${p.product_name || ''}`, formatQuantity(p.total_qty)])
     )
   }
 
@@ -163,8 +164,8 @@ export default function Reports() {
                     <td>
                       {s.product_sku} — {s.product_name}
                     </td>
-                    <td>{s.min_quantity}</td>
-                    <td>{s.current}</td>
+                    <td>{formatQuantity(s.min_quantity)}</td>
+                    <td>{formatQuantity(s.current)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -211,7 +212,7 @@ export default function Reports() {
                     <td>
                       {p.product_sku} — {p.product_name}
                     </td>
-                    <td>{p.total_qty}</td>
+                    <td>{formatQuantity(p.total_qty)}</td>
                   </tr>
                 ))}
               </tbody>

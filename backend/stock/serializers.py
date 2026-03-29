@@ -7,6 +7,10 @@ from warehouse.serializers import CellListSerializer
 class StockBalanceSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    product_barcode = serializers.CharField(source="product.barcode", read_only=True, allow_blank=True)
+    product_unit = serializers.CharField(source="product.unit", read_only=True)
+    product_category_name = serializers.CharField(source="product.category.name", read_only=True, allow_null=True)
+    product_photo = serializers.ImageField(source="product.photo", read_only=True, allow_null=True)
     cell_name = serializers.CharField(source="cell.name", read_only=True)
     warehouse_name = serializers.CharField(source="cell.rack.zone.warehouse.name", read_only=True)
     zone_name = serializers.CharField(source="cell.rack.zone.name", read_only=True)
@@ -19,6 +23,10 @@ class StockBalanceSerializer(serializers.ModelSerializer):
             "product",
             "product_name",
             "product_sku",
+            "product_barcode",
+            "product_unit",
+            "product_category_name",
+            "product_photo",
             "cell",
             "cell_name",
             "warehouse_name",

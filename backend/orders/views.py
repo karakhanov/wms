@@ -7,7 +7,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
-from django.db.models import Count, Q
+from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
@@ -18,8 +18,9 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from notifications.services import (
+    notify_foreman_issue_note_warehouse_received,
+    notify_foreman_procurement_shortage,
     notify_goods_awaiting_controller,
-    notify_inspection_done,
     notify_issue_note_decision,
     notify_issue_note_ready_pickup,
     notify_issue_note_received_foreman,
@@ -27,8 +28,10 @@ from notifications.services import (
     notify_issue_note_submitted,
     notify_managers_assign_controllers,
     notify_procurement_declined,
+    notify_storekeepers_issue_note_approved_picking,
 )
 from stock.models import StockBalance
+from warehouse.models import Cell
 from users.mixins import SetAuditUserMixin
 from users.models import Role
 from users.permissions import AnyAuthenticatedRole, ManagerStorekeeper
@@ -53,7 +56,7 @@ from .serializers import (
 
 def _deduct_stock_for_issue_note(note):
     for item in note.items.select_related("product", "request_item", "cell"):
-        quantity = item.quantity
+        quantity = item.actual_quantity if item.actual_quantity is not None else item.quantity
         product = item.product
         selected_cell = item.cell
         if selected_cell:
@@ -287,7 +290,13 @@ class MaterialRequestViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
 class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
     queryset = IssueNote.objects.all().select_related(
         "created_by", "request", "procurement_supplier"
-    ).prefetch_related("items__product", "items__cell", "inspection_invited_users")
+    ).prefetch_related(
+        Prefetch(
+            "items",
+            queryset=IssueNoteItem.objects.select_related("product__category", "cell"),
+        ),
+        "inspection_invited_users",
+    )
     permission_classes = [AnyAuthenticatedRole]
     parser_classes = [JSONParser, MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -346,6 +355,7 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
         note.procurement_notes = text
         note.save(update_fields=["status", "procurement_notes", "updated_at"])
         notify_issue_note_sent_procurement(note, actor=request.user)
+        notify_foreman_procurement_shortage(note, actor=request.user)
         return Response(_issue_note_data(note, request))
 
     @action(detail=True, methods=["post"], url_path="procurement-decline")
@@ -362,7 +372,7 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
         rejection_comment = (request.data.get("rejection_comment") or "").strip()
         if not rejection_comment:
             raise ValidationError("Укажите причину отказа.")
-        note.status = IssueNote.Status.REJECTED
+        note.status = IssueNote.Status.NOTE_COMPLETED
         note.rejection_comment = rejection_comment
         note.approved_by = request.user
         note.approved_at = timezone.now()
@@ -561,10 +571,39 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
             item.actual_quantity = ln["actual_quantity"]
             item.inspection_photos = merged_photos
             item.inspection_comment = (ln.get("inspection_comment") or "").strip()
-            item.save(update_fields=["actual_quantity", "inspection_photos", "inspection_comment", "updated_at"])
-        note.status = IssueNote.Status.AWAITING_RELEASE
+            qty = ln["actual_quantity"]
+            if qty > 0:
+                cid = ln.get("cell_id")
+                if cid:
+                    cell = Cell.objects.get(pk=cid)
+                else:
+                    cell = (
+                        Cell.objects.filter(
+                            is_active=True,
+                            rack__zone_id=ln["zone_id"],
+                            rack__zone__warehouse_id=ln["warehouse_id"],
+                        )
+                        .order_by("id")
+                        .first()
+                    )
+                    if not cell:
+                        raise ValidationError(
+                            "В выбранной зоне нет активных ячеек для оприходования. Добавьте ячейку в зоне или выберите другую зону."
+                        )
+                bal, _ = StockBalance.objects.get_or_create(
+                    product=item.product, cell=cell, defaults={"quantity": 0}
+                )
+                bal.quantity += qty
+                bal.save(update_fields=["quantity", "updated_at"])
+                item.cell = cell
+            else:
+                item.cell = None
+            item.save(
+                update_fields=["actual_quantity", "inspection_photos", "inspection_comment", "cell", "updated_at"]
+            )
+        note.status = IssueNote.Status.WAREHOUSE_RECEIVED_CLOSED
         note.save(update_fields=["status", "updated_at"])
-        notify_inspection_done(note, actor=request.user)
+        notify_foreman_issue_note_warehouse_received(note, actor=request.user)
         return Response(_issue_note_data(note, request))
 
     def perform_create(self, serializer):
@@ -601,6 +640,8 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         note = self.get_object()
+        if note.status in (IssueNote.Status.WAREHOUSE_RECEIVED_CLOSED, IssueNote.Status.NOTE_COMPLETED):
+            raise ValidationError("Накладная закрыта, изменение статуса невозможно.")
         role_name = getattr(getattr(self.request.user, "role", None), "name", None)
         vd = serializer.validated_data
         new_status = vd.get("status", note.status)
@@ -620,33 +661,47 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
             if note.status not in (IssueNote.Status.SUBMITTED, IssueNote.Status.AWAITING_RELEASE):
                 raise ValidationError("Одобрение доступно на согласовании или после приёмки (ожидает выдачу со склада).")
             _deduct_stock_for_issue_note(note)
-            serializer.save(status=IssueNote.Status.APPROVED, approved_by=self.request.user, approved_at=timezone.now())
-            notify_issue_note_decision(note, actor=self.request.user, status="approved")
-            return
-
-        if new_status == IssueNote.Status.REJECTED:
-            if role_name not in (Role.Name.ADMIN, Role.Name.MANAGER):
-                raise PermissionDenied("Отклонять накладные могут только менеджер или администратор.")
-            if note.status != IssueNote.Status.SUBMITTED:
-                raise ValidationError("Отклонение менеджером доступно только для накладной на согласовании.")
-            rejection_comment = (vd.get("rejection_comment") or "").strip()
-            if not rejection_comment:
-                raise ValidationError("Укажите причину отказа.")
-            serializer.save(
-                status=IssueNote.Status.REJECTED,
-                rejection_comment=rejection_comment,
+            updated = serializer.save(
+                status=IssueNote.Status.APPROVED,
                 approved_by=self.request.user,
                 approved_at=timezone.now(),
             )
-            notify_issue_note_decision(note, actor=self.request.user, status="rejected")
+            notify_issue_note_decision(updated, actor=self.request.user, status="approved")
+            notify_storekeepers_issue_note_approved_picking(updated, actor=self.request.user)
             return
+
+        if new_status == IssueNote.Status.NOTE_COMPLETED:
+            if note.status == IssueNote.Status.SUBMITTED:
+                if role_name not in (Role.Name.ADMIN, Role.Name.MANAGER):
+                    raise PermissionDenied("Отклонять накладные могут только менеджер или администратор.")
+                rejection_comment = (vd.get("rejection_comment") or "").strip()
+                if not rejection_comment:
+                    raise ValidationError("Укажите причину отказа.")
+                serializer.save(
+                    status=IssueNote.Status.NOTE_COMPLETED,
+                    rejection_comment=rejection_comment,
+                    approved_by=self.request.user,
+                    approved_at=timezone.now(),
+                )
+                notify_issue_note_decision(note, actor=self.request.user, status="rejected")
+                return
+            if note.status == IssueNote.Status.READY_PICKUP:
+                if role_name != Role.Name.FOREMAN:
+                    raise PermissionDenied("Подтвердить получение может только прораб.")
+                if note.created_by_id != self.request.user.id:
+                    raise PermissionDenied("Прораб может подтвердить только свою накладную.")
+                serializer.save(status=IssueNote.Status.NOTE_COMPLETED)
+                notify_issue_note_received_foreman(note, actor=self.request.user)
+                return
+            raise ValidationError("Завершить накладную в этом статусе нельзя.")
 
         if new_status == IssueNote.Status.PICKING:
             if not getattr(self.request.user, "is_superuser", False) and role_name not in (
                 Role.Name.ADMIN,
+                Role.Name.MANAGER,
                 Role.Name.STOREKEEPER,
             ):
-                raise PermissionDenied("Статус «Собирается» выставляет кладовщик или администратор.")
+                raise PermissionDenied("Статус «Собирается» выставляют кладовщик, менеджер или администратор.")
             if note.status != IssueNote.Status.APPROVED:
                 raise ValidationError("Сборка начинается после одобрения накладной.")
             serializer.save(status=IssueNote.Status.PICKING)
@@ -655,24 +710,14 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
         if new_status == IssueNote.Status.READY_PICKUP:
             if not getattr(self.request.user, "is_superuser", False) and role_name not in (
                 Role.Name.ADMIN,
+                Role.Name.MANAGER,
                 Role.Name.STOREKEEPER,
             ):
-                raise PermissionDenied("Статус «Готов к выдаче» выставляет кладовщик или администратор.")
+                raise PermissionDenied("Статус «Готов к выдаче» выставляют кладовщик, менеджер или администратор.")
             if note.status != IssueNote.Status.PICKING:
                 raise ValidationError("Сначала отметьте сборку (статус «Собирается»).")
             serializer.save(status=IssueNote.Status.READY_PICKUP)
             notify_issue_note_ready_pickup(note, actor=self.request.user)
-            return
-
-        if new_status == IssueNote.Status.RECEIVED_FOREMAN:
-            if role_name != Role.Name.FOREMAN:
-                raise PermissionDenied("Подтвердить получение может только прораб.")
-            if note.created_by_id != self.request.user.id:
-                raise PermissionDenied("Прораб может подтвердить только свою накладную.")
-            if note.status != IssueNote.Status.READY_PICKUP:
-                raise ValidationError("Подтверждение получения доступно после статуса «Готов к выдаче».")
-            serializer.save(status=IssueNote.Status.RECEIVED_FOREMAN)
-            notify_issue_note_received_foreman(note, actor=self.request.user)
             return
 
         raise ValidationError("Недопустимый переход статуса для PATCH.")

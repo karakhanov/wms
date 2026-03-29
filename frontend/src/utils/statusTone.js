@@ -2,7 +2,17 @@ export function getStatusTone(value) {
   const raw = String(value ?? '').trim().toLowerCase()
   if (!raw) return 'neutral'
 
-  const success = ['approved', 'shipped', 'completed', 'success', 'active', 'read', 'yes', 'true']
+  const success = [
+    'approved',
+    'shipped',
+    'completed',
+    'success',
+    'active',
+    'read',
+    'yes',
+    'true',
+  ]
+  const info = ['note_completed', 'warehouse_received']
   const danger = ['rejected', 'cancelled', 'canceled', 'failed', 'error', 'inactive', 'no', 'false']
   const warning = [
     'submitted',
@@ -21,6 +31,7 @@ export function getStatusTone(value) {
   const neutral = ['new', 'created', 'draft', 'unread']
 
   if (success.includes(raw)) return 'success'
+  if (info.includes(raw)) return 'info'
   if (danger.includes(raw)) return 'danger'
   if (warning.includes(raw)) return 'warning'
   if (neutral.includes(raw)) return 'neutral'

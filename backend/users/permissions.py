@@ -53,6 +53,41 @@ class ManagerStorekeeperProcurement(RolePermission):
     write_roles = {Role.Name.ADMIN, Role.Name.MANAGER, Role.Name.STOREKEEPER, Role.Name.PROCUREMENT}
 
 
+class WarehouseStructureReadOrAdminManage(permissions.BasePermission):
+    """GET: склад/зоны/ячейки — контролёр, снабжение, кладовщик + админ/менеджер; POST/PATCH/DELETE — только админ/менеджер."""
+
+    _manage = {Role.Name.ADMIN, Role.Name.MANAGER}
+    _read = {
+        Role.Name.ADMIN,
+        Role.Name.MANAGER,
+        Role.Name.STOREKEEPER,
+        Role.Name.WAREHOUSE_CONTROLLER,
+        Role.Name.PROCUREMENT,
+    }
+
+    def has_permission(self, request, view):
+        role_name = _user_role_name(request.user)
+        if not role_name:
+            return False
+        if request.method in permissions.SAFE_METHODS:
+            return role_name in self._read
+        return role_name in self._manage
+
+
+class StockBalanceRead(RolePermission):
+    """Просмотр остатков — как в DEFAULT_ROLE_POLICY['stock_balances']['read']."""
+
+    read_roles = {
+        Role.Name.ADMIN,
+        Role.Name.MANAGER,
+        Role.Name.STOREKEEPER,
+        Role.Name.FOREMAN,
+        Role.Name.PROCUREMENT,
+        Role.Name.WAREHOUSE_CONTROLLER,
+    }
+    write_roles = set()
+
+
 class StorekeeperOnly(RolePermission):
     read_roles = {Role.Name.ADMIN, Role.Name.STOREKEEPER}
     write_roles = {Role.Name.ADMIN, Role.Name.STOREKEEPER}
@@ -140,6 +175,7 @@ DEFAULT_ROLE_POLICY = {
             Role.Name.ADMIN,
             Role.Name.MANAGER,
             Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
             Role.Name.PROCUREMENT,
             Role.Name.WAREHOUSE_CONTROLLER,
         ],

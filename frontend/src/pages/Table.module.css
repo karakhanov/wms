@@ -295,6 +295,13 @@ html[data-theme='light'] .btnSm.btnDanger:hover {
   border-bottom: none;
 }
 
+.emptyTableMsg {
+  padding: 1.25rem 0.75rem !important;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .sortableHeader {
   cursor: pointer;
   user-select: none;
@@ -330,6 +337,12 @@ html[data-theme='light'] .btnSm.btnDanger:hover {
   border-color: rgba(234, 179, 8, 0.55);
 }
 
+.statusInfo {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.55);
+}
+
 .statusNeutral {
   color: #d1d5db;
   background: rgba(148, 163, 184, 0.2);
@@ -352,6 +365,12 @@ html[data-theme='light'] .statusWarning {
   color: #92400e;
   background: rgba(245, 158, 11, 0.25);
   border-color: rgba(245, 158, 11, 0.6);
+}
+
+html[data-theme='light'] .statusInfo {
+  color: #1d4ed8;
+  background: rgba(59, 130, 246, 0.18);
+  border-color: rgba(37, 99, 235, 0.55);
 }
 
 html[data-theme='light'] .statusNeutral {

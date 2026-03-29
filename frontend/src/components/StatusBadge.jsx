@@ -8,8 +8,10 @@ export default function StatusBadge({ value, toneValue }) {
       ? tableStyles.statusSuccess
       : tone === 'danger'
         ? tableStyles.statusDanger
-        : tone === 'warning'
-          ? tableStyles.statusWarning
-          : tableStyles.statusNeutral
+        : tone === 'info'
+          ? tableStyles.statusInfo
+          : tone === 'warning'
+            ? tableStyles.statusWarning
+            : tableStyles.statusNeutral
   return <span className={`${tableStyles.statusBadge} ${cls}`}>{value}</span>
 }

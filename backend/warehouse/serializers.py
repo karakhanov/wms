@@ -50,7 +50,9 @@ class RackListSerializer(serializers.ModelSerializer):
 
 class CellListSerializer(serializers.ModelSerializer):
     rack_name = serializers.CharField(source="rack.name", read_only=True)
+    zone_name = serializers.CharField(source="rack.zone.name", read_only=True)
+    warehouse_name = serializers.CharField(source="rack.zone.warehouse.name", read_only=True)
 
     class Meta:
         model = Cell
-        fields = ("id", "name", "code", "rack", "rack_name", "is_active")
+        fields = ("id", "name", "code", "rack", "rack_name", "zone_name", "warehouse_name", "is_active")

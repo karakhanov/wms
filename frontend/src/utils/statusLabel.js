@@ -6,12 +6,13 @@ export function issueNoteStatusLabel(t, status, fallback = '') {
     procurement_active: 'issueNotes.statusProcurementActive',
     await_ctrl_pick: 'issueNotes.statusAwaitCtrlPick',
     awaiting_controller: 'issueNotes.statusAwaitingController',
+    warehouse_received: 'issueNotes.statusWarehouseReceived',
     awaiting_release: 'issueNotes.statusAwaitingRelease',
     approved: 'issueNotes.approvedStatusLabel',
     picking: 'issueNotes.statusPicking',
     ready_pickup: 'issueNotes.statusReadyPickup',
-    received_foreman: 'issueNotes.statusReceivedForeman',
-    rejected: 'issueNotes.rejectedStatusLabel',
+    note_completed: 'issueNotes.statusNoteCompleted',
+    received_foreman: 'issueNotes.statusNoteCompleted',
   }
   if (map[key]) return t(map[key])
   return fallback || status || t('common.none')

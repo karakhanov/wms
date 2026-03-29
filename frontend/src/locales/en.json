@@ -201,10 +201,17 @@
   },
   "stock": {
     "title": "Stock",
-    "lead": "Current stock by cells.",
+    "lead": "Balances per product with photo, SKU, barcode, warehouse, and zone. Warehouse filter and search, similar to the product catalog.",
     "product": "Product (SKU)",
+    "warehouse": "Warehouse",
+    "zone": "Zone",
+    "rack": "Rack",
     "cell": "Cell",
-    "quantity": "Quantity"
+    "quantity": "Quantity",
+    "updatedAt": "Updated",
+    "emptyList": "No stock records yet.",
+    "emptyFiltered": "No rows match search or warehouse filter.",
+    "loadError": "Could not load stock balances. Check your connection and permissions."
   },
   "transfers": {
     "title": "Transfers",
@@ -307,7 +314,7 @@
   },
   "issueNotes": {
     "title": "Issue Notes",
-    "lead": "Foreman submits issue notes directly, manager or admin approves/rejects them, and stock is deducted only after approval.",
+    "lead": "Foreman submits issue notes for approval. After approval, storekeepers are notified to start picking, then mark ready for pickup; the foreman is notified and confirms receipt to close the note. Stock is deducted when the manager approves.",
     "id": "No",
     "number": "Number",
     "request": "Basis",
@@ -322,6 +329,8 @@
     "date": "Date",
     "create": "Create issue note",
     "approve": "Approve",
+    "approveBlockedByShortage": "Cannot approve: stock is insufficient for the accepted quantity (or requested). Reduce the accepted qty or restock.",
+    "storekeeperAwaitManagerApprove": "Waiting for the manager to approve after inspection. When the note is «Approved», storekeepers get a notification — «Start picking» and «Ready for pickup» will appear here.",
     "reject": "Reject",
     "validation": "Fill object, recipient, and issue note items.",
     "requestRequired": "Select an approved request.",
@@ -350,10 +359,19 @@
     "statusProcurementActive": "Purchasing",
     "statusAwaitCtrlPick": "Goods arrived — assign controllers",
     "statusAwaitingController": "Awaiting inspection",
+    "statusWarehouseReceived": "Goods received into warehouse (note closed)",
+    "placementWarehouse": "Warehouse",
+    "placementZone": "Zone",
+    "placementCell": "Cell",
+    "placementWarehousePlaceholder": "— warehouse —",
+    "placementZonePlaceholder": "— zone —",
+    "placementCellPlaceholder": "— cell —",
+    "placementRequired": "For lines with actual quantity greater than zero, select warehouse and zone.",
     "statusAwaitingRelease": "Awaiting warehouse release",
     "statusPicking": "Picking",
     "statusReadyPickup": "Ready for pickup",
     "statusReceivedForeman": "Received by foreman",
+    "statusNoteCompleted": "Completed",
     "sendToProcurement": "Send to procurement",
     "procurementNotesPrompt": "Comment for procurement (shortage, etc.)",
     "procurementProceed": "Start purchasing",
@@ -440,10 +458,14 @@
       "issue_note_approved": "Issue note approved",
       "issue_note_rejected": "Issue note rejected",
       "issue_note_sent_procurement": "With procurement",
+      "issue_note_foreman_procurement_shortage": "Shortage → procurement (foreman)",
+      "issue_note_foreman_procurement_goods_in": "Procurement goods received (foreman)",
       "issue_note_procurement_declined": "Procurement declined",
       "issue_note_goods_for_inspection": "Goods for inspection",
       "issue_note_assign_controllers": "Assign controllers",
       "issue_note_inspection_done": "Inspection done",
+      "issue_note_foreman_warehouse_received": "Goods in warehouse (foreman)",
+      "issue_note_storekeeper_start_picking": "Start picking (storekeeper)",
       "issue_note_ready_pickup": "Ready for pickup",
       "issue_note_received_foreman": "Foreman received"
     },
@@ -464,6 +486,14 @@
         "title": "With procurement: {{number}}",
         "message": "Issue note {{number}} was sent to procurement."
       },
+      "issue_note_foreman_procurement_shortage": {
+        "title": "Shortage sent to procurement: {{number}}",
+        "message": "Your issue note {{number}} was sent to procurement due to insufficient stock."
+      },
+      "issue_note_foreman_procurement_goods_in": {
+        "title": "Purchased goods accepted: {{number}}",
+        "message": "Inspection of purchased goods for issue note {{number}} is complete — the manager can approve release."
+      },
       "issue_note_procurement_declined": {
         "title": "Procurement declined: {{number}}",
         "message": "Procurement cannot supply issue note {{number}}."
@@ -479,6 +509,14 @@
       "issue_note_inspection_done": {
         "title": "Inspection done: {{number}}",
         "message": "Controller finished inspection for issue note {{number}}."
+      },
+      "issue_note_storekeeper_start_picking": {
+        "title": "Start picking: {{number}}",
+        "message": "Issue note {{number}} ({{object_name}}) was approved. Open it, tap «Start picking», then when done — «Ready for pickup»."
+      },
+      "issue_note_foreman_warehouse_received": {
+        "title": "Goods received into warehouse: {{number}}",
+        "message": "Materials for issue note {{number}} ({{object_name}}) were received into the warehouse. This note is closed. If you still need these items, create a new issue note."
       },
       "issue_note_ready_pickup": {
         "title": "Ready for pickup: {{number}}",

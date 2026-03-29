@@ -39,10 +39,11 @@ def notify_issue_note_decision(note, actor=None, status=""):
         return
     decision = Notification.Type.ISSUE_NOTE_APPROVED if status == "approved" else Notification.Type.ISSUE_NOTE_REJECTED
     title = "Накладная одобрена" if status == "approved" else "Накладная отклонена"
+    message = f"Статус накладной {note.number} изменен на: {title.lower()}."
     payload = {
         "type": decision,
         "title": f"{title}: {note.number}",
-        "message": f"Статус накладной {note.number} изменен на: {title.lower()}.",
+        "message": message,
         "payload": {
             "number": note.number,
         },
@@ -69,6 +70,52 @@ def notify_issue_note_sent_procurement(note, actor=None):
         "entity_id": note.id,
     }
     _create_notifications(recipients, payload, actor=actor)
+
+
+def notify_foreman_procurement_shortage(note, actor=None):
+    """Прорабу: накладную отправили в снабжение из‑за нехватки на складе."""
+    recipient = getattr(note, "created_by", None)
+    if not recipient or not recipient.is_active:
+        return
+    if recipient.id == getattr(actor, "id", None):
+        return
+    comment = (getattr(note, "procurement_notes", None) or "").strip()
+    snippet = (comment[:400] + "…") if len(comment) > 400 else comment
+    obj = _object_name(note)
+    payload = {
+        "type": Notification.Type.ISSUE_NOTE_FOREMAN_PROCUREMENT_SHORTAGE,
+        "title": f"Нехватка передана в снабжение: {note.number}",
+        "message": (
+            f"По вашей накладной {note.number} ({obj}) менеджер передал заказ в снабжение — на складе не хватало материалов."
+            + (f" Комментарий: {snippet}" if snippet else "")
+        ),
+        "payload": {"number": note.number, "object_name": obj},
+        "entity_type": "issue_note",
+        "entity_id": note.id,
+    }
+    _create_notifications([recipient], payload, actor=actor)
+
+
+def notify_foreman_issue_note_warehouse_received(note, actor=None):
+    """Прорабу: контролёр оприходовал товар по накладной, накладная закрыта."""
+    recipient = getattr(note, "created_by", None)
+    if not recipient or not recipient.is_active:
+        return
+    if recipient.id == getattr(actor, "id", None):
+        return
+    obj = _object_name(note)
+    payload = {
+        "type": Notification.Type.ISSUE_NOTE_FOREMAN_WAREHOUSE_RECEIVED,
+        "title": f"Товар принят на склад: {note.number}",
+        "message": (
+            f"По накладной {note.number} ({obj}) контролёр оприходовал материалы на склад. Эта накладная закрыта. "
+            f"Если товары всё ещё нужны на объекте — создайте новую накладную."
+        ),
+        "payload": {"number": note.number, "object_name": obj},
+        "entity_type": "issue_note",
+        "entity_id": note.id,
+    }
+    _create_notifications([recipient], payload, actor=actor)
 
 
 def notify_procurement_declined(note, actor=None):
@@ -136,6 +183,31 @@ def notify_inspection_done(note, actor=None):
         "title": f"Приёмка завершена: {note.number}",
         "message": f"Контролёр завершил приёмку по накладной {note.number}. Требуется одобрение выдачи.",
         "payload": {"number": note.number},
+        "entity_type": "issue_note",
+        "entity_id": note.id,
+    }
+    _create_notifications(recipients, payload, actor=actor)
+
+
+def notify_storekeepers_issue_note_approved_picking(note, actor=None):
+    """Кладовщикам и админу: накладная одобрена — начать сборку в системе."""
+    recipients = list(
+        User.objects.filter(
+            is_active=True,
+            role__name__in=(Role.Name.STOREKEEPER, Role.Name.ADMIN),
+        ).exclude(id=getattr(actor, "id", None))
+    )
+    if not recipients:
+        return
+    object_name = getattr(getattr(note, "construction_object", None), "name", "") or "-"
+    payload = {
+        "type": Notification.Type.ISSUE_NOTE_STOREKEEPER_START_PICKING,
+        "title": f"Начать сборку: {note.number}",
+        "message": (
+            f"Накладная {note.number} ({object_name}) одобрена. "
+            f"Откройте накладную и нажмите «Начать сборку», затем по готовности — «Готов к выдаче»."
+        ),
+        "payload": {"number": note.number, "object_name": object_name},
         "entity_type": "issue_note",
         "entity_id": note.id,
     }

@@ -151,6 +151,9 @@ class MaterialRequestCreateSerializer(serializers.ModelSerializer):
 class IssueNoteItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    product_category_name = serializers.CharField(source="product.category.name", read_only=True, allow_null=True)
+    product_unit = serializers.CharField(source="product.unit", read_only=True)
+    cell_label = serializers.SerializerMethodField()
 
     class Meta:
         model = IssueNoteItem
@@ -160,14 +163,20 @@ class IssueNoteItemSerializer(serializers.ModelSerializer):
             "product",
             "product_name",
             "product_sku",
+            "product_category_name",
+            "product_unit",
             "quantity",
             "actual_quantity",
             "inspection_photos",
             "inspection_comment",
             "comment",
             "cell",
+            "cell_label",
         )
-        read_only_fields = ("actual_quantity", "inspection_photos", "inspection_comment")
+        read_only_fields = ("actual_quantity", "inspection_photos", "inspection_comment", "cell", "cell_label")
+
+    def get_cell_label(self, obj):
+        return str(obj.cell) if obj.cell_id else ""
         extra_kwargs = {"request_item": {"required": False, "allow_null": True}}
 
 
@@ -266,6 +275,9 @@ class IssueNoteUpdateSerializer(serializers.ModelSerializer):
 class ControllerLineSerializer(serializers.Serializer):
     item_id = serializers.IntegerField(min_value=1)
     actual_quantity = serializers.DecimalField(max_digits=14, decimal_places=3, min_value=0)
+    warehouse_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    zone_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    cell_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
     inspection_comment = serializers.CharField(required=False, allow_blank=True, default="")
     inspection_photos = serializers.ListField(
         child=serializers.CharField(max_length=500, allow_blank=True), allow_empty=True, required=False
@@ -273,6 +285,41 @@ class ControllerLineSerializer(serializers.Serializer):
 
     def validate_inspection_photos(self, value):
         return [v.strip() for v in value if v and str(v).strip()]
+
+    def validate(self, attrs):
+        from warehouse.models import Cell, Zone
+
+        qty = attrs["actual_quantity"]
+        if qty <= 0:
+            return attrs
+
+        wh = attrs.get("warehouse_id")
+        zn = attrs.get("zone_id")
+        ce = attrs.get("cell_id")
+
+        if wh is None or zn is None:
+            raise serializers.ValidationError(
+                "При ненулевом количестве укажите склад и зону размещения."
+            )
+
+        if not Zone.objects.filter(pk=zn, warehouse_id=wh).exists():
+            raise serializers.ValidationError({"zone_id": "Зона не найдена или не относится к выбранному складу."})
+
+        if ce is not None:
+            cell = (
+                Cell.objects.filter(pk=ce, is_active=True)
+                .select_related("rack__zone__warehouse")
+                .first()
+            )
+            if not cell:
+                raise serializers.ValidationError({"cell_id": "Ячейка не найдена или неактивна."})
+            z = cell.rack.zone
+            if z.id != zn:
+                raise serializers.ValidationError({"zone_id": "Зона не соответствует выбранной ячейке."})
+            if z.warehouse_id != wh:
+                raise serializers.ValidationError({"warehouse_id": "Склад не соответствует зоне и ячейке."})
+
+        return attrs
 
 
 class ControllerCompleteSerializer(serializers.Serializer):

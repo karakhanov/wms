@@ -198,6 +198,58 @@
   padding: 0.65rem 0.75rem;
 }
 
+.detailsCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.detailsCardHeader:hover .detailsCardChevron {
+  color: var(--text, #e8ecf5);
+}
+
+.detailsCardHeader:focus-visible {
+  outline: 2px solid rgba(100, 149, 237, 0.85);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.detailsCardChevron {
+  flex-shrink: 0;
+  color: var(--muted);
+  transition: transform 0.18s ease, color 0.12s ease;
+}
+
+.detailsCardChevronOpen {
+  transform: rotate(180deg);
+}
+
+.detailsCardBody {
+  margin-top: 0.55rem;
+}
+
+.detailWorkflowHint {
+  flex: 1 1 100%;
+  width: 100%;
+  margin: 0 0 0.35rem;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+}
+
 .detailItemsTableWrap {
   overflow: visible;
   border: 1px solid var(--glass-border);
@@ -345,8 +397,9 @@
   overflow-y: auto;
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  background: var(--surface-elevated, rgba(28, 32, 45, 0.98));
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  background: var(--glass-bg-strong);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
 }
 
 .supplierComboList {
@@ -364,7 +417,7 @@
   padding: 0.45rem 0.65rem;
   border: none;
   background: transparent;
-  color: inherit;
+  color: var(--text);
   font-size: 0.88rem;
   text-align: left;
   cursor: pointer;
@@ -373,7 +426,7 @@
 
 .supplierComboOption:hover,
 .supplierComboOption:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--surface-hover);
   outline: none;
 }
 
@@ -518,6 +571,17 @@
   border-radius: var(--radius-sm);
   border: 1px solid var(--glass-border);
   background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+}
+
+.inspectionSelect {
+  min-width: 5.5rem;
+  max-width: 10rem;
+  padding: 0.2rem 0.3rem;
+  font-size: 0.78rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
   color: inherit;
 }
 

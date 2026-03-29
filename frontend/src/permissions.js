@@ -225,10 +225,18 @@ export function canControllerIssueNote(user) {
   return withFallback(user, 'issue_notes', 'write', () => true)
 }
 
-/** Сборка и готовность к выдаче — только кладовщик; админ — полный доступ */
+/**
+ * Сборка и «Готов к выдаче»: кладовщик (достаточно права чтения накладных — без write кнопка не должна пропадать),
+ * менеджер и админ — как на схеме «одобрил → склад собирает».
+ */
 export function canStorekeeperIssueNoteFlow(user) {
-  if (!isStorekeeper(user) && !isAdmin(user)) return false
-  return withFallback(user, 'issue_notes', 'write', () => true)
+  if (isStorekeeper(user)) {
+    return withFallback(user, 'issue_notes', 'read', () => true)
+  }
+  if (isAdmin(user) || user?.is_superuser || isManager(user)) {
+    return withFallback(user, 'issue_notes', 'write', () => true)
+  }
+  return false
 }
 
 /** Прораб (роль); для кнопки «Получил» см. canForemanConfirmIssueNote */

@@ -7,9 +7,18 @@ import PaginationBar from '../components/PaginationBar'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
+import { formatQuantity } from '../utils/formatQuantity'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import formStyles from './Form.module.css'
 import styles from './Table.module.css'
+
+function photoUrl(photo) {
+  if (!photo) return null
+  const s = String(photo)
+  if (s.startsWith('http')) return s
+  return `/${s}`.replace(/^\/+/, '/')
+}
 
 export default function Stock() {
   const { t } = useTranslation()
@@ -21,8 +30,9 @@ export default function Stock() {
   const debouncedSearch = useDebouncedValue(search, 400)
   const [warehouseId, setWarehouseId] = useState('')
   const [warehouses, setWarehouses] = useState([])
-  const [sortKey, setSortKey] = useState('product')
+  const [sortKey, setSortKey] = useState('sku')
   const [sortDir, setSortDir] = useState('asc')
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     warehouseApi
@@ -33,6 +43,7 @@ export default function Stock() {
 
   const load = useCallback(() => {
     setLoading(true)
+    setLoadError('')
     stockApi
       .balances({
         page,
@@ -40,10 +51,22 @@ export default function Stock() {
         search: debouncedSearch.trim() || undefined,
         cell__rack__zone__warehouse: warehouseId || undefined,
       })
-      .then((d) => setTableData(normalizeListResponse(d)))
-      .catch(() => setTableData({ results: [], count: 0 }))
+      .then((d) => {
+        setTableData(normalizeListResponse(d))
+      })
+      .catch((err) => {
+        const d = err?.response?.data?.detail
+        const msg =
+          typeof d === 'string'
+            ? d
+            : Array.isArray(d)
+              ? d.map((x) => (typeof x === 'string' ? x : x?.message || String(x))).join(' ')
+              : ''
+        setLoadError(msg.trim() || t('stock.loadError'))
+        setTableData({ results: [], count: 0 })
+      })
       .finally(() => setLoading(false))
-  }, [page, pageSize, debouncedSearch, warehouseId])
+  }, [page, pageSize, debouncedSearch, warehouseId, t])
 
   useEffect(() => {
     load()
@@ -55,9 +78,15 @@ export default function Stock() {
     const factor = sortDir === 'asc' ? 1 : -1
     list.sort((a, b) => {
       const pick = (row) => {
-        if (sortKey === 'product') return `${row.product_sku || ''} ${row.product_name || ''}`
-        if (sortKey === 'cell') return String(row.cell_name || '')
+        if (sortKey === 'sku') return String(row.product_sku || '')
+        if (sortKey === 'name') return String(row.product_name || '')
+        if (sortKey === 'barcode') return String(row.product_barcode || '')
+        if (sortKey === 'category') return String(row.product_category_name || '')
+        if (sortKey === 'unit') return String(row.product_unit || '')
+        if (sortKey === 'warehouse') return String(row.warehouse_name || '')
+        if (sortKey === 'zone') return String(row.zone_name || '')
         if (sortKey === 'quantity') return Number(row.quantity || 0)
+        if (sortKey === 'updated') return String(row.updated_at || '')
         return ''
       }
       const av = pick(a)
@@ -88,17 +117,45 @@ export default function Stock() {
       const { results } = normalizeListResponse(data)
       downloadCsv(
         `stock_${new Date().toISOString().slice(0, 10)}`,
-        [t('stock.product'), t('stock.cell'), t('stock.quantity')],
-        results.map((b) => [`${b.product_sku} — ${b.product_name}`, b.cell_name, b.quantity])
+        [
+          t('products.sku'),
+          t('products.name'),
+          t('products.barcode'),
+          t('products.category'),
+          t('products.unit'),
+          t('stock.warehouse'),
+          t('stock.zone'),
+          t('stock.quantity'),
+          t('stock.updatedAt'),
+        ],
+        results.map((b) => [
+          b.product_sku || '',
+          b.product_name || '',
+          b.product_barcode || '',
+          b.product_category_name || '',
+          b.product_unit || '',
+          b.warehouse_name || '',
+          b.zone_name || '',
+          formatQuantity(b.quantity),
+          b.updated_at ? String(b.updated_at).replace('T', ' ').slice(0, 19) : '',
+        ])
       )
     } catch {
       /* empty */
     }
   }
 
+  const colCount = 10
+
   return (
     <div className={styles.page}>
-      <h1 className={styles.h1}>{t('stock.title')}</h1>
+      <div className={styles.pageHead}>
+        <div>
+          <h1 className={styles.h1}>{t('stock.title')}</h1>
+          <p className={styles.lead}>{t('stock.lead')}</p>
+        </div>
+      </div>
+
       <TableToolbar
         search={search}
         onSearchChange={(v) => {
@@ -125,6 +182,9 @@ export default function Stock() {
           ))}
         </select>
       </TableToolbar>
+
+      {!loading && loadError ? <div className={formStyles.error}>{loadError}</div> : null}
+
       {loading ? (
         <div>{t('common.loading')}</div>
       ) : (
@@ -133,26 +193,132 @@ export default function Stock() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('stock.product')} sortKey="product" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('stock.cell')} sortKey="cell" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('stock.quantity')} sortKey="quantity" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
+                  <th>{t('common.photo')}</th>
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('products.sku')}
+                    sortKey="sku"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('products.name')}
+                    sortKey="name"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('products.barcode')}
+                    sortKey="barcode"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('products.category')}
+                    sortKey="category"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('products.unit')}
+                    sortKey="unit"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('stock.warehouse')}
+                    sortKey="warehouse"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('stock.zone')}
+                    sortKey="zone"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('stock.quantity')}
+                    sortKey="quantity"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
+                  <SortHeader
+                    className={styles.sortableHeader}
+                    label={t('stock.updatedAt')}
+                    sortKey="updated"
+                    activeKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                  />
                 </tr>
               </thead>
               <tbody>
-                {sortedRows.map((b) => (
-                  <tr key={b.id}>
-                    <td>
-                      {b.product_sku} — {b.product_name}
+                {!sortedRows.length && !loadError ? (
+                  <tr>
+                    <td colSpan={colCount} className={styles.emptyTableMsg}>
+                      {rows.length === 0 && !debouncedSearch.trim() && !warehouseId
+                        ? t('stock.emptyList')
+                        : t('stock.emptyFiltered')}
                     </td>
-                    <td>{b.cell_name}</td>
-                    <td>{b.quantity}</td>
                   </tr>
-                ))}
+                ) : sortedRows.length ? (
+                  sortedRows.map((b) => (
+                    <tr key={b.id}>
+                      <td>
+                        {b.product_photo ? (
+                          <img src={photoUrl(b.product_photo)} alt="" className={styles.thumb} />
+                        ) : (
+                          <span className={styles.thumbPlaceholder}>—</span>
+                        )}
+                      </td>
+                      <td>{b.product_sku || t('common.none')}</td>
+                      <td>{b.product_name || t('common.none')}</td>
+                      <td>{b.product_barcode || t('common.none')}</td>
+                      <td>{b.product_category_name || t('common.none')}</td>
+                      <td>{b.product_unit || t('common.none')}</td>
+                      <td>{b.warehouse_name || t('common.none')}</td>
+                      <td>{b.zone_name || t('common.none')}</td>
+                      <td>{formatQuantity(b.quantity)}</td>
+                      <td>
+                        {b.updated_at
+                          ? String(b.updated_at).replace('T', ' ').slice(0, 19)
+                          : t('common.none')}
+                      </td>
+                    </tr>
+                  ))
+                ) : null}
               </tbody>
             </table>
           </div>
           <div className={styles.paginationDock}>
-            <PaginationBar page={page} pageCount={pages} total={count} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} disabled={loading} />
+            <PaginationBar
+              page={page}
+              pageCount={pages}
+              total={count}
+              onPageChange={setPage}
+              pageSize={pageSize}
+              onPageSizeChange={(size) => {
+                setPageSize(size)
+                setPage(1)
+              }}
+              disabled={loading}
+            />
           </div>
         </div>
       )}

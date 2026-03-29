@@ -8,6 +8,7 @@ import {
   stock as stockApi,
   suppliers as suppliersApi,
   users as usersApi,
+  warehouse as warehouseApi,
 } from '../api'
 import { useAuth } from '../auth'
 import {
@@ -19,6 +20,7 @@ import {
   canProcurementIssueNote,
   canSendIssueNoteToProcurement,
   canShowIssueNoteApproveButton,
+  issueNoteApproveBlockedByShortage,
   canStorekeeperIssueNoteFlow,
   canUserInspectIssueNote,
   canViewIssueNotes,
@@ -34,9 +36,12 @@ import { downloadCsv } from '../utils/csvExport'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import PaginationBar from '../components/PaginationBar'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
+import { formatQuantity } from '../utils/formatQuantity'
+import { effectiveIssueLineQty } from '../utils/issueNoteLineQty'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { inDateRange } from '../utils/dateFilter'
 import { issueNoteStatusLabel } from '../utils/statusLabel'
+import { IconChevronDown } from '../ui/Icons'
 import tableStyles from './Table.module.css'
 import formStyles from './Form.module.css'
 import styles from './IssueNotes.module.css'
@@ -95,12 +100,6 @@ function computeDefaultProcurementItemIds(note, itemShortageByItemId) {
 }
 
 export default function IssueNotes() {
-  const fmtQty = (v) => {
-    const n = Number(v || 0)
-    if (!Number.isFinite(n)) return '0'
-    return n.toFixed(3).replace(/\.?0+$/, '')
-  }
-
   const [searchParams, setSearchParams] = useSearchParams()
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -136,6 +135,11 @@ export default function IssueNotes() {
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [stockLoading, setStockLoading] = useState(false)
   const [selectedNote, setSelectedNote] = useState(null)
+  const [detailsCardsOpen, setDetailsCardsOpen] = useState({
+    procurementNotes: true,
+    procurementReadonly: true,
+    procurementForm: true,
+  })
   const [stockByProduct, setStockByProduct] = useState({})
   const [noteShortageById, setNoteShortageById] = useState({})
   const [noteHoverInfoById, setNoteHoverInfoById] = useState({})
@@ -158,6 +162,17 @@ export default function IssueNotes() {
   const [supplierComboText, setSupplierComboText] = useState('')
   const [supplierComboOpen, setSupplierComboOpen] = useState(false)
   const supplierComboRef = useRef(null)
+  const [placementWarehouses, setPlacementWarehouses] = useState([])
+  const [placementZonesByWh, setPlacementZonesByWh] = useState({})
+
+  const ensurePlacementZones = useCallback((whId) => {
+    const wid = String(whId || '')
+    if (!wid) return Promise.resolve()
+    return warehouseApi.zones({ warehouse: wid, page_size: 500 }).then((d) => {
+      const list = normalizeListResponse(d).results || []
+      setPlacementZonesByWh((prev) => ({ ...prev, [wid]: list }))
+    })
+  }, [])
   const [procurementForm, setProcurementForm] = useState({
     procurement_purchase_date: '',
     procurement_amount: '',
@@ -273,6 +288,16 @@ export default function IssueNotes() {
   }, [detailsOpen])
 
   useEffect(() => {
+    if (detailsOpen && selectedNote?.id) {
+      setDetailsCardsOpen({
+        procurementNotes: true,
+        procurementReadonly: true,
+        procurementForm: true,
+      })
+    }
+  }, [detailsOpen, selectedNote?.id])
+
+  useEffect(() => {
     if (!supplierComboOpen) return
     const onDocDown = (e) => {
       if (supplierComboRef.current && !supplierComboRef.current.contains(e.target)) {
@@ -320,20 +345,20 @@ export default function IssueNotes() {
             const wName = b.warehouse_name || t('common.none')
             wh.set(wName, (wh.get(wName) || 0) + Number(b.quantity || 0))
           })
-          warehouseMap[String(pid)] = Array.from(wh.entries()).map(([name, qty]) => `${name}: ${fmtQty(qty)}`)
+          warehouseMap[String(pid)] = Array.from(wh.entries()).map(([name, qty]) => `${name}: ${formatQuantity(qty)}`)
         })
         const next = {}
         const hoverInfo = {}
         rowsWithItems.forEach((note) => {
           const shortages = (note?.items || []).map((it) => {
-            const need = Number(it?.quantity || 0)
+            const need = effectiveIssueLineQty(it)
             const total = Number(totals[String(it?.product)] || 0)
             return need > total
           })
           next[String(note.id)] = shortages.some(Boolean)
           const itemLines = (note?.items || []).map((it) => {
             const pid = String(it?.product || '')
-            const need = Number(it?.quantity || 0)
+            const need = effectiveIssueLineQty(it)
             const total = Number(totals[pid] || 0)
             const lack = Math.max(0, need - total)
             const label = `${it?.product_sku ? `${it.product_sku} - ` : ''}${it?.product_name || t('common.none')}`
@@ -341,9 +366,9 @@ export default function IssueNotes() {
             return {
               shortage: lack > 0,
               productLabel: label,
-              need: fmtQty(need),
-              total: fmtQty(total),
-              lack: fmtQty(lack),
+              need: formatQuantity(need),
+              total: formatQuantity(total),
+              lack: formatQuantity(lack),
               warehouses,
             }
           })
@@ -374,6 +399,34 @@ export default function IssueNotes() {
       : ''
 
   useEffect(() => {
+    setPlacementZonesByWh({})
+  }, [selectedNote?.id])
+
+  useEffect(() => {
+    if (!detailsOpen || selectedNote?.status !== 'awaiting_controller') {
+      setPlacementWarehouses([])
+      return
+    }
+    if (!canUserInspectIssueNote(user, selectedNote)) {
+      setPlacementWarehouses([])
+      return
+    }
+    let alive = true
+    warehouseApi
+      .warehouses({ page_size: 500, is_active: true })
+      .then((d) => {
+        if (!alive) return
+        setPlacementWarehouses(normalizeListResponse(d).results || [])
+      })
+      .catch(() => {
+        if (alive) setPlacementWarehouses([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [detailsOpen, selectedNote?.id, selectedNote?.status, selectedNote?.inspection_invited_user_ids, user])
+
+  useEffect(() => {
     if (!detailsOpen || !selectedNote?.items?.length) {
       setControllerLines([])
       return
@@ -392,6 +445,8 @@ export default function IssueNotes() {
         actualQty: String(it.actual_quantity != null ? it.actual_quantity : it.quantity ?? ''),
         inspectionComment: String(it.inspection_comment || ''),
         photoFiles: [],
+        warehouseId: '',
+        zoneId: '',
       }))
     )
   }, [
@@ -485,7 +540,7 @@ export default function IssueNotes() {
           if (!pid || !qty || qty <= 0) return null
           return {
             product: pid,
-            quantity: qty.toFixed(3),
+            quantity: formatQuantity(qty),
             comment: (it.comment || '').trim(),
           }
         })
@@ -528,8 +583,10 @@ export default function IssueNotes() {
 
   const onApprove = async (id, status, rejectionComment = '') => {
     try {
-      const payload = { status }
-      if (status === 'rejected') payload.rejection_comment = rejectionComment
+      const payload =
+        status === 'rejected'
+          ? { status: 'note_completed', rejection_comment: rejectionComment }
+          : { status }
       await ordersApi.issueNoteUpdate(id, payload)
       await load()
     } catch (err) {
@@ -614,7 +671,7 @@ export default function IssueNotes() {
     }
   }
 
-  const patchIssueStatus = async (status, { closeAfter = false } = {}) => {
+  const patchIssueStatus = async (status, { closeAfter = true } = {}) => {
     if (!selectedNote?.id) return
     setError('')
     try {
@@ -644,7 +701,7 @@ export default function IssueNotes() {
       await ordersApi.issueNoteSendToProcurement(noteId, { procurement_notes: trimmed })
       setProcurementCommentModal({ open: false, noteId: null, text: '' })
       await load()
-      if (selectedNote?.id === noteId) await refreshNoteInModal(noteId)
+      if (selectedNote?.id === noteId) closeDetails()
     } catch (err) {
       setError(err?.response?.data?.detail || t('issueNotes.createError'))
     }
@@ -692,6 +749,7 @@ export default function IssueNotes() {
       }
       await ordersApi.issueNoteProcurementDetails(selectedNote.id, payload)
       await refreshNoteInModal(selectedNote.id)
+      setDetailsCardsOpen((s) => ({ ...s, procurementForm: false }))
     } catch (err) {
       setError(err?.response?.data?.detail || t('issueNotes.createError'))
     }
@@ -707,6 +765,7 @@ export default function IssueNotes() {
     try {
       await ordersApi.issueNoteAssignInspection(selectedNote.id, { user_ids: assignControllerIds })
       await refreshNoteInModal(selectedNote.id)
+      closeDetails()
     } catch (err) {
       setError(err?.response?.data?.detail || t('issueNotes.createError'))
     }
@@ -735,6 +794,7 @@ export default function IssueNotes() {
     try {
       await ordersApi.issueNoteProcurementProceed(selectedNote.id)
       await refreshNoteInModal(selectedNote.id)
+      closeDetails()
     } catch (err) {
       setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.procurementFillForm'))
     }
@@ -745,6 +805,7 @@ export default function IssueNotes() {
     try {
       await ordersApi.issueNoteGoodsArrived(selectedNote.id)
       await refreshNoteInModal(selectedNote.id)
+      closeDetails()
     } catch (err) {
       setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.procurementFillForm'))
     }
@@ -752,16 +813,30 @@ export default function IssueNotes() {
 
   const onControllerComplete = async () => {
     if (!selectedNote?.id) return
-    const lines = controllerLines.map((ln) => ({
-      item_id: ln.item_id,
-      actual_quantity: Number(String(ln.actualQty).replace(',', '.')).toFixed(3),
-      inspection_comment: (ln.inspectionComment || '').trim(),
-      inspection_photos: [],
-    }))
-    for (const ln of lines) {
+    const lines = controllerLines.map((ln) => {
+      const aq = formatQuantity(String(ln.actualQty).replace(',', '.'))
+      const qtyNum = Number(String(aq).replace(',', '.'))
+      const needPlacement = Number.isFinite(qtyNum) && qtyNum > 0
+      return {
+        item_id: ln.item_id,
+        actual_quantity: aq,
+        warehouse_id: needPlacement && ln.warehouseId ? Number(ln.warehouseId) : null,
+        zone_id: needPlacement && ln.zoneId ? Number(ln.zoneId) : null,
+        inspection_comment: (ln.inspectionComment || '').trim(),
+        inspection_photos: [],
+      }
+    })
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i]
       if (!Number.isFinite(Number(ln.actual_quantity)) || Number(ln.actual_quantity) < 0) {
         setError(t('issueNotes.validation'))
         return
+      }
+      if (Number(ln.actual_quantity) > 0) {
+        if (!ln.warehouse_id || !ln.zone_id) {
+          setError(t('issueNotes.placementRequired'))
+          return
+        }
       }
     }
     const filesByItemId = {}
@@ -772,8 +847,9 @@ export default function IssueNotes() {
     try {
       await ordersApi.issueNoteControllerComplete(selectedNote.id, { lines, filesByItemId })
       await refreshNoteInModal(selectedNote.id)
+      closeDetails()
     } catch (err) {
-      setError(err?.response?.data?.detail || t('issueNotes.createError'))
+      setError(formatApiErrorDetail(err?.response?.data) || t('issueNotes.createError'))
     }
   }
 
@@ -825,8 +901,10 @@ export default function IssueNotes() {
     }
     setError('')
     try {
-      const payload = { status }
-      if (status === 'rejected') payload.rejection_comment = rejectionComment
+      const payload =
+        status === 'rejected'
+          ? { status: 'note_completed', rejection_comment: rejectionComment }
+          : { status }
       await ordersApi.issueNoteUpdate(selectedNote.id, payload)
       await refreshNoteInModal(selectedNote.id)
       if (status === 'rejected') closeDetails()
@@ -840,7 +918,7 @@ export default function IssueNotes() {
     () =>
       noteItems.map((it, idx) => {
         const stockInfo = stockByProduct[String(it.product)] || { total: 0, byWarehouse: [] }
-        const need = Number(it.quantity || 0)
+        const need = effectiveIssueLineQty(it)
         const total = Number(stockInfo.total || 0)
         const shortage = Math.max(0, need - total)
         return {
@@ -1532,11 +1610,26 @@ export default function IssueNotes() {
             ) : null}
             {selectedNote.procurement_notes ? (
               <div className={styles.detailsComment}>
-                <div className={styles.fieldLabel}>{t('issueNotes.procurementNotesLabel')}</div>
-                <div>{selectedNote.procurement_notes}</div>
+                <button
+                  type="button"
+                  className={styles.detailsCardHeader}
+                  aria-expanded={detailsCardsOpen.procurementNotes}
+                  onClick={() =>
+                    setDetailsCardsOpen((s) => ({ ...s, procurementNotes: !s.procurementNotes }))
+                  }
+                >
+                  <IconChevronDown
+                    size={16}
+                    className={`${styles.detailsCardChevron} ${detailsCardsOpen.procurementNotes ? styles.detailsCardChevronOpen : ''}`}
+                  />
+                  <span className={styles.fieldLabel}>{t('issueNotes.procurementNotesLabel')}</span>
+                </button>
+                {detailsCardsOpen.procurementNotes ? (
+                  <div className={styles.detailsCardBody}>{selectedNote.procurement_notes}</div>
+                ) : null}
               </div>
             ) : null}
-            {selectedNote.status === 'rejected' && selectedNote.rejection_comment ? (
+            {selectedNote.status === 'note_completed' && selectedNote.rejection_comment ? (
               <div className={styles.detailsComment}>
                 <div className={styles.fieldLabel}>{t('issueNotes.rejectCommentLabel')}</div>
                 <div>{selectedNote.rejection_comment}</div>
@@ -1557,8 +1650,22 @@ export default function IssueNotes() {
               selectedNote.procurement_delivery_notes ||
               selectedNote.procurement_scan_url) ? (
               <div className={styles.detailsComment}>
-                <div className={styles.fieldLabel}>{t('issueNotes.procurementDetailsReadonly')}</div>
-                <div className={styles.procurementReadonlyGrid}>
+                <button
+                  type="button"
+                  className={styles.detailsCardHeader}
+                  aria-expanded={detailsCardsOpen.procurementReadonly}
+                  onClick={() =>
+                    setDetailsCardsOpen((s) => ({ ...s, procurementReadonly: !s.procurementReadonly }))
+                  }
+                >
+                  <IconChevronDown
+                    size={16}
+                    className={`${styles.detailsCardChevron} ${detailsCardsOpen.procurementReadonly ? styles.detailsCardChevronOpen : ''}`}
+                  />
+                  <span className={styles.fieldLabel}>{t('issueNotes.procurementDetailsReadonly')}</span>
+                </button>
+                {detailsCardsOpen.procurementReadonly ? (
+                <div className={`${styles.procurementReadonlyGrid} ${styles.detailsCardBody}`}>
                   {selectedNote.procurement_purchase_date ? (
                     <div>
                       <span className={styles.fieldLabel}>{t('issueNotes.procurementPurchaseDate')}</span>{' '}
@@ -1616,12 +1723,28 @@ export default function IssueNotes() {
                     </div>
                   ) : null}
                 </div>
+                ) : null}
               </div>
             ) : null}
 
             {canProcurement && (selectedNote.status === 'awaiting_procurement' || selectedNote.status === 'procurement_active') ? (
               <div className={styles.procurementEditBox}>
-                <div className={styles.fieldLabel}>{t('issueNotes.procurementDetailsTitle')}</div>
+                <button
+                  type="button"
+                  className={styles.detailsCardHeader}
+                  aria-expanded={detailsCardsOpen.procurementForm}
+                  onClick={() =>
+                    setDetailsCardsOpen((s) => ({ ...s, procurementForm: !s.procurementForm }))
+                  }
+                >
+                  <IconChevronDown
+                    size={16}
+                    className={`${styles.detailsCardChevron} ${detailsCardsOpen.procurementForm ? styles.detailsCardChevronOpen : ''}`}
+                  />
+                  <span className={styles.fieldLabel}>{t('issueNotes.procurementDetailsTitle')}</span>
+                </button>
+                {detailsCardsOpen.procurementForm ? (
+                <div className={styles.detailsCardBody}>
                 <div className={styles.procurementEditGrid}>
                   <label className={`${styles.fieldLabel} ${styles.fieldRequired}`}>{t('issueNotes.procurementPurchaseDate')}</label>
                   <input
@@ -1763,6 +1886,8 @@ export default function IssueNotes() {
                 <button type="button" className={`${formStyles.btn} ${formStyles.btnPrimary}`} onClick={onSaveProcurementDetails}>
                   {t('common.save')}
                 </button>
+                </div>
+                ) : null}
               </div>
             ) : null}
 
@@ -1797,6 +1922,8 @@ export default function IssueNotes() {
                       <tr>
                         <th>{t('issueNotes.product')}</th>
                         <th>{t('issueNotes.actualQty')}</th>
+                        <th>{t('issueNotes.placementWarehouse')}</th>
+                        <th>{t('issueNotes.placementZone')}</th>
                         <th>{t('issueNotes.inspectionPhotosPick')}</th>
                         <th>{t('issueNotes.inspectionLineComment')}</th>
                       </tr>
@@ -1807,6 +1934,10 @@ export default function IssueNotes() {
                         const label = it
                           ? `${it.product_sku ? `${it.product_sku} ` : ''}${it.product_name || ''}`.trim()
                           : `#${ln.item_id}`
+                        const whKey = ln.warehouseId ? String(ln.warehouseId) : ''
+                        const zonesForRow = whKey ? placementZonesByWh[whKey] || [] : []
+                        const zoneOptionLabel = (z) =>
+                          [z.code, z.name].filter(Boolean).join(' · ') || `#${z.id}`
                         return (
                           <tr key={ln.item_id}>
                             <td className={styles.inspectionProductCell} title={label}>
@@ -1825,6 +1956,56 @@ export default function IssueNotes() {
                                   )
                                 }}
                               />
+                            </td>
+                            <td>
+                              <select
+                                className={styles.inspectionSelect}
+                                value={ln.warehouseId || ''}
+                                onFocus={() => {
+                                  if (ln.warehouseId) ensurePlacementZones(ln.warehouseId)
+                                }}
+                                onChange={(e) => {
+                                  const wid = e.target.value
+                                  setControllerLines((prev) =>
+                                    prev.map((row, i) =>
+                                      i === idx
+                                        ? { ...row, warehouseId: wid, zoneId: '' }
+                                        : row
+                                    )
+                                  )
+                                  if (wid) ensurePlacementZones(wid)
+                                }}
+                              >
+                                <option value="">{t('issueNotes.placementWarehousePlaceholder')}</option>
+                                {placementWarehouses.map((w) => (
+                                  <option key={w.id} value={String(w.id)}>
+                                    {w.name || `#${w.id}`}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td>
+                              <select
+                                className={styles.inspectionSelect}
+                                value={ln.zoneId || ''}
+                                disabled={!ln.warehouseId}
+                                onFocus={() => {
+                                  if (ln.warehouseId) ensurePlacementZones(ln.warehouseId)
+                                }}
+                                onChange={(e) => {
+                                  const zid = e.target.value
+                                  setControllerLines((prev) =>
+                                    prev.map((row, i) => (i === idx ? { ...row, zoneId: zid } : row))
+                                  )
+                                }}
+                              >
+                                <option value="">{t('issueNotes.placementZonePlaceholder')}</option>
+                                {zonesForRow.map((z) => (
+                                  <option key={z.id} value={String(z.id)}>
+                                    {zoneOptionLabel(z)}
+                                  </option>
+                                ))}
+                              </select>
                             </td>
                             <td>
                               <div className={styles.inspectionFileRow}>
@@ -1897,6 +2078,7 @@ export default function IssueNotes() {
                     <th>{t('products.unit')}</th>
                     <th>{t('issueNotes.qty')}</th>
                     <th>{t('issueNotes.actualQty')}</th>
+                    <th>{t('issueNotes.cell')}</th>
                     <th>{t('issueNotes.photosCol')}</th>
                     <th>{t('issueNotes.inspectionCommentCol')}</th>
                     <th>{t('products.description')}</th>
@@ -1909,8 +2091,13 @@ export default function IssueNotes() {
                         <td>{it.category_name || it.product_category_name || t('common.none')}</td>
                         <td>{`${it.product_sku ? `${it.product_sku} - ` : ''}${it.product_name || t('common.none')}`}</td>
                         <td>{it.product_unit || it.unit || t('common.none')}</td>
-                        <td>{it.quantity}</td>
-                        <td>{it.actual_quantity != null && it.actual_quantity !== '' ? it.actual_quantity : t('common.none')}</td>
+                        <td>{formatQuantity(it.quantity)}</td>
+                        <td>
+                          {it.actual_quantity != null && it.actual_quantity !== ''
+                            ? formatQuantity(it.actual_quantity)
+                            : t('common.none')}
+                        </td>
+                        <td>{it.cell_label || t('common.none')}</td>
                         <td className={styles.photoLinksCell}>
                           {Array.isArray(it.inspection_photos) && it.inspection_photos.length
                             ? it.inspection_photos.map((url, i) => (
@@ -1926,7 +2113,7 @@ export default function IssueNotes() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8}>{t('common.none')}</td>
+                      <td colSpan={9}>{t('common.none')}</td>
                     </tr>
                   )}
                 </tbody>
@@ -1946,17 +2133,17 @@ export default function IssueNotes() {
                       <div key={row.key} className={`${styles.stockCard} ${row.shortage > 0 ? styles.stockCardShortage : ''}`}>
                         <div className={styles.stockCardTitle}>{row.productLabel}</div>
                         <div className={styles.stockLine}>
-                          <span>{t('issueNotes.qty')}:</span> <b>{row.need.toFixed(3)}</b>
+                          <span>{t('issueNotes.qty')}:</span> <b>{formatQuantity(row.need)}</b>
                         </div>
                         <div className={styles.stockLine}>
-                          <span>{t('issueNotes.stockTotal')}:</span> <b>{row.total.toFixed(3)}</b>
+                          <span>{t('issueNotes.stockTotal')}:</span> <b>{formatQuantity(row.total)}</b>
                         </div>
                         <div className={`${styles.stockLine} ${row.shortage > 0 ? styles.stockDanger : ''}`}>
-                          <span>{t('issueNotes.shortageQty')}:</span> <b>{row.shortage.toFixed(3)}</b>
+                          <span>{t('issueNotes.shortageQty')}:</span> <b>{formatQuantity(row.shortage)}</b>
                         </div>
                         <div className={styles.stockWarehouses}>
                           {row.byWarehouse.length
-                            ? row.byWarehouse.map((w) => `${w.warehouse}: ${Number(w.qty || 0).toFixed(3)}`).join(', ')
+                            ? row.byWarehouse.map((w) => `${w.warehouse}: ${formatQuantity(w.qty)}`).join(', ')
                             : t('common.none')}
                         </div>
                       </div>
@@ -1967,15 +2154,30 @@ export default function IssueNotes() {
             ) : null}
 
             <div className={`${formStyles.actions} ${styles.detailActions}`}>
-              {selectedNote.status === 'submitted' &&
-              canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
-                <button
-                  type="button"
-                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                  onClick={() => onApproveFromDetails('approved')}
-                >
-                  {t('issueNotes.approve')}
-                </button>
+              {selectedNote.status === 'awaiting_release' && canStorekeeperFlow ? (
+                <p className={styles.detailWorkflowHint}>{t('issueNotes.storekeeperAwaitManagerApprove')}</p>
+              ) : null}
+              {selectedNote.status === 'submitted' && canApprove ? (
+                <>
+                  {canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
+                    <button
+                      type="button"
+                      className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                      onClick={() => onApproveFromDetails('approved')}
+                    >
+                      {t('issueNotes.approve')}
+                    </button>
+                  ) : canSeeShortageHints && issueNoteApproveBlockedByShortage(selectedNote, noteShortageById) ? (
+                    <button
+                      type="button"
+                      disabled
+                      className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                      title={t('issueNotes.approveBlockedByShortage')}
+                    >
+                      {t('issueNotes.approve')}
+                    </button>
+                  ) : null}
+                </>
               ) : null}
               {selectedNote.status === 'submitted' && canApprove ? (
                 <button
@@ -2022,15 +2224,27 @@ export default function IssueNotes() {
                   {t('issueNotes.goodsArrived')}
                 </button>
               ) : null}
-              {selectedNote.status === 'awaiting_release' &&
-              canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
-                <button
-                  type="button"
-                  className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                  onClick={() => onApproveFromDetails('approved')}
-                >
-                  {t('issueNotes.approve')}
-                </button>
+              {selectedNote.status === 'awaiting_release' && canApprove ? (
+                <>
+                  {canShowIssueNoteApproveButton(user, selectedNote, noteShortageById, canSeeShortageHints) ? (
+                    <button
+                      type="button"
+                      className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                      onClick={() => onApproveFromDetails('approved')}
+                    >
+                      {t('issueNotes.approve')}
+                    </button>
+                  ) : canSeeShortageHints && issueNoteApproveBlockedByShortage(selectedNote, noteShortageById) ? (
+                    <button
+                      type="button"
+                      disabled
+                      className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                      title={t('issueNotes.approveBlockedByShortage')}
+                    >
+                      {t('issueNotes.approve')}
+                    </button>
+                  ) : null}
+                </>
               ) : null}
               {selectedNote.status === 'approved' && canStorekeeperFlow ? (
                 <button
@@ -2054,7 +2268,7 @@ export default function IssueNotes() {
                 <button
                   type="button"
                   className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                  onClick={() => patchIssueStatus('received_foreman', { closeAfter: true })}
+                  onClick={() => patchIssueStatus('note_completed')}
                 >
                   {t('issueNotes.confirmReceived')}
                 </button>
@@ -2205,18 +2419,31 @@ export default function IssueNotes() {
                   {tableShowActions ? (
                     <td onClick={(e) => e.stopPropagation()}>
                       <div className={styles.rowActions}>
-                        {n.status === 'submitted' &&
-                        canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
-                          <button
-                            type="button"
-                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onApprove(n.id, 'approved')
-                            }}
-                          >
-                            {t('issueNotes.approve')}
-                          </button>
+                        {n.status === 'submitted' && canApprove ? (
+                          <>
+                            {canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
+                              <button
+                                type="button"
+                                className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onApprove(n.id, 'approved')
+                                }}
+                              >
+                                {t('issueNotes.approve')}
+                              </button>
+                            ) : canSeeShortageHints && issueNoteApproveBlockedByShortage(n, noteShortageById) ? (
+                              <button
+                                type="button"
+                                disabled
+                                className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                                title={t('issueNotes.approveBlockedByShortage')}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {t('issueNotes.approve')}
+                              </button>
+                            ) : null}
+                          </>
                         ) : null}
                         {n.status === 'submitted' && canApprove ? (
                           <button
@@ -2277,18 +2504,31 @@ export default function IssueNotes() {
                             {t('issueNotes.rowQuickAssign')}
                           </button>
                         ) : null}
-                        {n.status === 'awaiting_release' &&
-                        canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
-                          <button
-                            type="button"
-                            className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onApprove(n.id, 'approved')
-                            }}
-                          >
-                            {t('issueNotes.approve')}
-                          </button>
+                        {n.status === 'awaiting_release' && canApprove ? (
+                          <>
+                            {canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ? (
+                              <button
+                                type="button"
+                                className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onApprove(n.id, 'approved')
+                                }}
+                              >
+                                {t('issueNotes.approve')}
+                              </button>
+                            ) : canSeeShortageHints && issueNoteApproveBlockedByShortage(n, noteShortageById) ? (
+                              <button
+                                type="button"
+                                disabled
+                                className={`${formStyles.btn} ${formStyles.btnPrimary}`}
+                                title={t('issueNotes.approveBlockedByShortage')}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {t('issueNotes.approve')}
+                              </button>
+                            ) : null}
+                          </>
                         ) : null}
                         {n.status === 'approved' && canStorekeeperFlow ? (
                           <button
@@ -2312,7 +2552,7 @@ export default function IssueNotes() {
                           <button
                             type="button"
                             className={`${formStyles.btn} ${formStyles.btnPrimary}`}
-                            onClick={(e) => onRowQuickPatch(e, n, 'received_foreman')}
+                            onClick={(e) => onRowQuickPatch(e, n, 'note_completed')}
                           >
                             {t('issueNotes.confirmReceived')}
                           </button>
@@ -2320,13 +2560,16 @@ export default function IssueNotes() {
                         {!(
                           (n.status === 'submitted' &&
                             (canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ||
+                              (canApprove && canSeeShortageHints && issueNoteApproveBlockedByShortage(n, noteShortageById)) ||
                               canApprove ||
                               canSendProcurement)) ||
                           (n.status === 'awaiting_procurement' && canProcurement) ||
                           (n.status === 'procurement_active' && canProcurement) ||
                           (n.status === 'await_ctrl_pick' && canApprove && controllers.length > 0) ||
                           (n.status === 'awaiting_release' &&
-                            canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints)) ||
+                            canApprove &&
+                            (canShowIssueNoteApproveButton(user, n, noteShortageById, canSeeShortageHints) ||
+                              (canSeeShortageHints && issueNoteApproveBlockedByShortage(n, noteShortageById)))) ||
                           (n.status === 'approved' && canStorekeeperFlow) ||
                           (n.status === 'picking' && canStorekeeperFlow) ||
                           (n.status === 'ready_pickup' && canForemanConfirmIssueNote(user, n))

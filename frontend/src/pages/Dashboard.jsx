@@ -35,8 +35,10 @@ function fmtInt(n, lang) {
 }
 
 function fmtQty(n, lang) {
-  if (n == null || Number.isNaN(n)) return '—'
-  return new Intl.NumberFormat(intlLocale(lang), { maximumFractionDigits: 1, minimumFractionDigits: 0 }).format(n)
+  if (n == null || n === '') return '—'
+  const num = typeof n === 'string' ? Number(String(n).replace(',', '.')) : Number(n)
+  if (!Number.isFinite(num)) return '—'
+  return new Intl.NumberFormat(intlLocale(lang), { maximumFractionDigits: 3, minimumFractionDigits: 0 }).format(num)
 }
 
 function fmtDate(iso, lang) {

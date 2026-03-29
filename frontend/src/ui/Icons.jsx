@@ -74,6 +74,21 @@ export function IconChevronRight({ className, size = 18 }) {
   )
 }
 
+/** Раскрыть блок (вниз) */
+export function IconChevronDown({ className, size = 18 }) {
+  return (
+    <Svg className={className} size={size}>
+      <path
+        d="M6 9l6 6 6-6"
+        stroke="currentColor"
+        strokeWidth="1.85"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}
+
 const NAV_PATHS = {
   dashboard: (
     <>

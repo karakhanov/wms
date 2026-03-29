@@ -201,10 +201,17 @@
   },
   "stock": {
     "title": "Остатки",
-    "lead": "Текущие остатки по ячейкам. Мониторинг минимального остатка.",
+    "lead": "Остатки по товарам с фото, SKU, штрихкодом, складом и зоной. Фильтр по складу и поиск, как в каталоге товаров.",
     "product": "Товар (SKU)",
+    "warehouse": "Склад",
+    "zone": "Зона",
+    "rack": "Стеллаж",
     "cell": "Ячейка",
-    "quantity": "Количество"
+    "quantity": "Количество",
+    "updatedAt": "Обновлено",
+    "emptyList": "Остатков в системе пока нет.",
+    "emptyFiltered": "Нет строк по поиску или выбранному складу.",
+    "loadError": "Не удалось загрузить остатки. Проверьте сеть и права доступа."
   },
   "transfers": {
     "title": "Перемещение",
@@ -307,7 +314,7 @@
   },
   "issueNotes": {
     "title": "Накладные выдачи",
-    "lead": "Прораб сразу отправляет накладную на согласование, менеджер или администратор одобряет/отклоняет, списание остатков происходит только после одобрения.",
+    "lead": "Прораб отправляет накладную на согласование, менеджер одобряет или отклоняет. После одобрения кладовщикам приходит уведомление: они начинают сборку, затем отмечают готовность к выдаче; прораб получает уведомление и подтверждает получение — накладная закрывается. Списание остатков — при одобрении менеджером.",
     "id": "№",
     "number": "Номер",
     "request": "Основание",
@@ -322,6 +329,8 @@
     "date": "Дата",
     "create": "Создать накладную",
     "approve": "Одобрить",
+    "approveBlockedByShortage": "Одобрение недоступно: по факту приёмки (или по заявке) не хватает остатка на складе. Уменьшите факт или пополните склад.",
+    "storekeeperAwaitManagerApprove": "Сейчас очередь за менеджером: нужно одобрить накладную после приёмки. Когда статус станет «Одобрена», кладовщикам придёт уведомление — здесь появятся кнопки «Начать сборку» и «Готов к выдаче».",
     "reject": "Отклонить",
     "validation": "Заполните объект, получателя и строки накладной.",
     "requestRequired": "Выберите одобренную заявку.",
@@ -350,10 +359,19 @@
     "statusProcurementActive": "Закупка",
     "statusAwaitCtrlPick": "Товар прибыл — назначить контролёра",
     "statusAwaitingController": "Ожидает приёмку",
+    "statusWarehouseReceived": "Товар принят на склад (накладная закрыта)",
+    "placementWarehouse": "Склад",
+    "placementZone": "Зона",
+    "placementCell": "Ячейка",
+    "placementWarehousePlaceholder": "— склад —",
+    "placementZonePlaceholder": "— зона —",
+    "placementCellPlaceholder": "— ячейка —",
+    "placementRequired": "Для строк с фактом больше нуля укажите склад и зону.",
     "statusAwaitingRelease": "Ожидает выдачу со склада",
     "statusPicking": "Собирается",
     "statusReadyPickup": "Готов к выдаче",
     "statusReceivedForeman": "Прораб получил",
+    "statusNoteCompleted": "Завершена",
     "sendToProcurement": "В снабжение",
     "procurementNotesPrompt": "Комментарий для снабжения (нехватка и т.д.)",
     "procurementProceed": "Взять в закупку",
@@ -440,10 +458,13 @@
       "issue_note_approved": "Накладная одобрена",
       "issue_note_rejected": "Накладная отклонена",
       "issue_note_sent_procurement": "У снабжения",
+      "issue_note_foreman_procurement_shortage": "Нехватка → снабжение (прорабу)",
+      "issue_note_foreman_procurement_goods_in": "Закупка принята (прорабу)",
       "issue_note_procurement_declined": "Отказ снабжения",
       "issue_note_goods_for_inspection": "Приёмка товара",
       "issue_note_assign_controllers": "Назначьте контролёров",
       "issue_note_inspection_done": "Приёмка завершена",
+      "issue_note_storekeeper_start_picking": "Начать сборку (кладовщик)",
       "issue_note_ready_pickup": "Готово к выдаче",
       "issue_note_received_foreman": "Прораб получил"
     },
@@ -464,6 +485,14 @@
         "title": "У снабжения: {{number}}",
         "message": "Накладная {{number}} передана в снабжение."
       },
+      "issue_note_foreman_procurement_shortage": {
+        "title": "Нехватка передана в снабжение: {{number}}",
+        "message": "По вашей накладной {{number}} заказ передан в снабжение из‑за нехватки на складе."
+      },
+      "issue_note_foreman_procurement_goods_in": {
+        "title": "Закупленные материалы приняты: {{number}}",
+        "message": "По накладной {{number}} завершена приёмка закупленного товара — можно ожидать одобрения выдачи."
+      },
       "issue_note_procurement_declined": {
         "title": "Отказ снабжения: {{number}}",
         "message": "По накладной {{number}} снабжение не может обеспечить закупку."
@@ -479,6 +508,14 @@
       "issue_note_inspection_done": {
         "title": "Приёмка завершена: {{number}}",
         "message": "Контролёр завершил приёмку по накладной {{number}}."
+      },
+      "issue_note_storekeeper_start_picking": {
+        "title": "Начать сборку: {{number}}",
+        "message": "Накладная {{number}} ({{object_name}}) одобрена. Откройте накладную, нажмите «Начать сборку», затем по готовности — «Готов к выдаче»."
+      },
+      "issue_note_foreman_warehouse_received": {
+        "title": "Товар принят на склад: {{number}}",
+        "message": "По накладной {{number}} ({{object_name}}) материалы оприходованы на склад. Накладная закрыта. Если товары всё ещё нужны — создайте новую накладную."
       },
       "issue_note_ready_pickup": {
         "title": "Готово к выдаче: {{number}}",
