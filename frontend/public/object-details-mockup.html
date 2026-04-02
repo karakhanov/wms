@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WMS UI Mockup - Object Details</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #edf4f2;
+        --panel: rgba(255, 255, 255, 0.9);
+        --card: #f7fbfa;
+        --border: rgba(16, 65, 58, 0.12);
+        --text: #113831;
+        --muted: #5b7871;
+        --accent: #0f7a68;
+        --accent-soft: rgba(15, 122, 104, 0.12);
+        --radius: 14px;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Manrope", system-ui, sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #f3f8f6 0%, var(--bg) 100%);
+      }
+      .layout {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: 240px 1fr;
+      }
+      .sidebar {
+        border-right: 1px solid var(--border);
+        background: var(--panel);
+        padding: 20px 14px;
+      }
+      .logo {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 8px;
+        background: #fff;
+      }
+      .logo img { width: 100%; display: block; }
+      .nav { margin-top: 14px; display: grid; gap: 6px; }
+      .nav-item {
+        padding: 9px 10px;
+        border-radius: 10px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .nav-item.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-weight: 700;
+      }
+      .content { padding: 18px 20px 28px; }
+      .title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .back-btn {
+        width: 34px; height: 34px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--muted);
+        display: inline-flex; align-items: center; justify-content: center;
+        font-size: 19px; font-weight: 800;
+      }
+      h1 { margin: 0; font-size: 40px; letter-spacing: -0.03em; }
+      .hero {
+        display: grid;
+        grid-template-columns: 260px 1fr;
+        gap: 14px;
+      }
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        background: var(--panel);
+        box-shadow: 0 5px 24px rgba(8, 52, 46, 0.08);
+      }
+      .photo-panel {
+        padding: 10px;
+        min-height: 220px;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .photo {
+        width: 100%; border-radius: 11px;
+        background: #fff;
+        border: 1px solid var(--border);
+        padding: 8px;
+      }
+      .photo img { width: 100%; display: block; object-fit: contain; }
+      .info-panel { padding: 12px; }
+      .info-head {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 10px;
+      }
+      .btn {
+        border: 1px solid rgba(15, 122, 104, 0.3);
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 13px;
+        padding: 7px 14px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .field {
+        border-radius: 12px;
+        border: 1px solid rgba(15, 122, 104, 0.16);
+        background: linear-gradient(180deg, rgba(15, 122, 104, 0.08), rgba(15, 122, 104, 0.02));
+        padding: 10px 12px;
+      }
+      .field.k-last { grid-column: 1 / -1; }
+      .k { color: var(--muted); font-size: 12px; margin-bottom: 4px; }
+      .v { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+      .v.normal { font-size: 30px; }
+      .tab {
+        margin-top: 12px;
+        border: 1px solid rgba(15, 122, 104, 0.26);
+        background: var(--accent-soft);
+        color: var(--accent);
+        border-radius: 11px;
+        text-align: center;
+        padding: 9px;
+        font-weight: 700;
+      }
+      .table-wrap { margin-top: 10px; overflow: hidden; }
+      table { width: 100%; border-collapse: collapse; background: var(--panel); }
+      th, td { padding: 12px; border-bottom: 1px solid rgba(16, 65, 58, 0.08); font-size: 13px; }
+      th { text-align: left; color: var(--muted); font-weight: 700; background: rgba(15, 122, 104, 0.07); }
+      tr:last-child td { border-bottom: none; }
+      @media (max-width: 1100px) {
+        .layout { grid-template-columns: 1fr; }
+        .sidebar { display: none; }
+        .hero { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="logo"><img src="/branding/logo.png" alt="Bashkent" /></div>
+        <div class="nav">
+          <div class="nav-item">Дашборд</div>
+          <div class="nav-item">Товары</div>
+          <div class="nav-item">Услуги</div>
+          <div class="nav-item active">Объекты</div>
+          <div class="nav-item">Типы объектов</div>
+          <div class="nav-item">Лимиты объектов</div>
+        </div>
+      </aside>
+      <main class="content">
+        <div class="title-row">
+          <span class="back-btn">‹</span>
+          <h1>Дом 18</h1>
+        </div>
+
+        <section class="hero">
+          <div class="panel photo-panel">
+            <div class="photo"><img src="/branding/logo.png" alt="Object photo" /></div>
+          </div>
+          <div class="panel info-panel">
+            <div class="info-head"><button class="btn">Изменить</button></div>
+            <div class="info-grid">
+              <div class="field">
+                <div class="k">Код</div>
+                <div class="v">3.18</div>
+              </div>
+              <div class="field">
+                <div class="k">Тип</div>
+                <div class="v">тест</div>
+              </div>
+              <div class="field">
+                <div class="k">Адрес</div>
+                <div class="v normal">Джаркурган 47А</div>
+              </div>
+              <div class="field">
+                <div class="k">Лимит суммы</div>
+                <div class="v">—</div>
+              </div>
+              <div class="field k-last">
+                <div class="k">Лимит количества</div>
+                <div class="v">—</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="tab">Лимиты</div>
+        <div class="panel table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Тип позиции</th>
+                <th>Позиция</th>
+                <th>Лимит</th>
+                <th>Использовано</th>
+                <th>Остаток</th>
+                <th>%</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Товар</td>
+                <td>00-00000563 - 2E Клавиатура и мышка</td>
+                <td>50</td>
+                <td>0</td>
+                <td>50</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Товар</td>
+                <td>00-00004204 - 00-00004204</td>
+                <td>3</td>
+                <td>0</td>
+                <td>3</td>
+                <td>0</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </body>
+  </html>

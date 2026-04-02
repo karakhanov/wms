@@ -5,7 +5,9 @@ const baseURL = '/api'
 
 const api = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
+  // Content-Type не задаём жёстко:
+  // - для JSON Axios сам проставит application/json
+  // - для FormData важно, чтобы Axios добавил boundary
 })
 
 api.interceptors.request.use((config) => {
@@ -49,23 +51,26 @@ function productPayload(data) {
     return fd
   }
   const { photo, ...rest } = data
+  // Если явно передали photo: null — очищаем поле фото на сервере.
+  if (data.photo === null) return { ...rest, photo: null }
   return rest
 }
 
 export const products = {
   list: (params) => api.get('/products/', { params }).then((r) => r.data),
   get: (id) => api.get(`/products/${id}/`).then((r) => r.data),
+  history: (id, params) => api.get(`/products/${id}/history/`, { params }).then((r) => r.data),
   create: (data) => {
     const payload = productPayload(data)
     if (payload instanceof FormData) {
-      return api.post('/products/', payload, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+      return api.post('/products/', payload).then((r) => r.data)
     }
     return api.post('/products/', payload).then((r) => r.data)
   },
   update: (id, data) => {
     const payload = productPayload(data)
     if (payload instanceof FormData) {
-      return api.patch(`/products/${id}/`, payload, { headers: { 'Content-Type': 'multipart/form-data' } }).then((r) => r.data)
+      return api.patch(`/products/${id}/`, payload).then((r) => r.data)
     }
     return api.patch(`/products/${id}/`, payload).then((r) => r.data)
   },
@@ -75,6 +80,10 @@ export const products = {
   categoryCreate: (data) => api.post('/products/categories/', data).then((r) => r.data),
   categoryUpdate: (id, data) => api.patch(`/products/categories/${id}/`, data).then((r) => r.data),
   categoryDelete: (id) => api.delete(`/products/categories/${id}/`),
+  services: (params) => api.get('/products/services/', { params }).then((r) => r.data),
+  serviceCreate: (data) => api.post('/products/services/', data).then((r) => r.data),
+  serviceUpdate: (id, data) => api.patch(`/products/services/${id}/`, data).then((r) => r.data),
+  serviceDelete: (id) => api.delete(`/products/services/${id}/`),
 }
 
 export const suppliers = {
@@ -98,9 +107,35 @@ export const warehouse = {
 }
 
 export const construction = {
+  _payload: (data) => {
+    const hasFile = data?.photo instanceof File
+    if (!hasFile) return data
+    const fd = new FormData()
+    Object.entries(data || {}).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') fd.append(k, v)
+    })
+    fd.append('photo', data.photo)
+    return fd
+  },
   objects: (params) => api.get('/construction/objects/', { params }).then((r) => r.data),
-  createObject: (data) => api.post('/construction/objects/', data).then((r) => r.data),
-  updateObject: (id, data) => api.patch(`/construction/objects/${id}/`, data).then((r) => r.data),
+  objectGet: (id) => api.get(`/construction/objects/${id}/`).then((r) => r.data),
+  createObject: (data) => api.post('/construction/objects/', construction._payload(data)).then((r) => r.data),
+  updateObject: (id, data) => api.patch(`/construction/objects/${id}/`, construction._payload(data)).then((r) => r.data),
+  deleteObject: (id) => api.delete(`/construction/objects/${id}/`),
+  objectTypes: (params) => api.get('/construction/object-types/', { params }).then((r) => r.data),
+  objectTypeGet: (id) => api.get(`/construction/object-types/${id}/`).then((r) => r.data),
+  createObjectType: (data) => api.post('/construction/object-types/', construction._payload(data)).then((r) => r.data),
+  updateObjectType: (id, data) => api.patch(`/construction/object-types/${id}/`, construction._payload(data)).then((r) => r.data),
+  uploadObjectPhoto: (id, file) => {
+    const fd = new FormData()
+    fd.append('photo', file)
+    return api.post(`/construction/objects/${id}/upload_photo/`, fd).then((r) => r.data)
+  },
+  uploadObjectTypePhoto: (id, file) => {
+    const fd = new FormData()
+    fd.append('photo', file)
+    return api.post(`/construction/object-types/${id}/upload_photo/`, fd).then((r) => r.data)
+  },
 }
 
 export const receipts = {
@@ -192,7 +227,7 @@ export const inventory = {
 
 export const reports = {
   /** Одним запросом: счётчики, последние приёмки/заказы, топ, нехватка (дашборд) */
-  summary: () => api.get('/reports/summary/').then((r) => r.data),
+  summary: (params) => api.get('/reports/summary/', { params }).then((r) => r.data),
   movement: (params) => api.get('/reports/movement/', { params }).then((r) => r.data),
   shortage: () => api.get('/reports/shortage/').then((r) => r.data),
   popular: (params) => api.get('/reports/popular/', { params }).then((r) => r.data),

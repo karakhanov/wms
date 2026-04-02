@@ -1,0 +1,43 @@
+---
+description: Unified data panel — tabs (optional), one card, toolbar row, table — for list and detail pages
+globs:
+  - "frontend/src/pages/**/*.jsx"
+  - "frontend/src/components/ListPageDataPanel.jsx"
+  - "frontend/src/pages/DataPanelLayout.module.css"
+alwaysApply: false
+---
+
+# Единая карточка данных (таблица + фильтры)
+
+Используй этот паттерн для **списочных страниц** и для **блока табов + таблицы** на детальных страницах (как карточка товара).
+
+## Структура DOM
+
+1. **Секция** (`DataPanelLayout.dataPanelSection`) — внешние отступы; для списка без отступа сверху у страницы с пустым верхом — `dataPanelSectionFlushTop`.
+2. **Табы** (опционально) — `DataPanelLayout.tabsBar` **над** карточкой, не внутри белой панели.
+3. **Одна карточка** (`dataPanelCard`): без `gap` между дочерними блоками (не комбинировать с `Table.pageBody`, у которого есть `gap`).
+4. **Тулбар** (`dataPanelToolbar`): внутри — строка `filterToolbar`:
+   - **Слева** (`filterToolbarLead` + `filterToolbarLeadRow`): заголовок раздела `filterToolbarHeadline` (на списках — `<h1>`), опционально `filterToolbarLeadExtra` (например «Добавить»).
+   - **Справа** (`filterToolbarActions`): поиск, селекты, даты, пресеты, экспорт. Всё в **одной строке** с `align-items: center` (задаётся в `.filterToolbar`).
+5. **Разделитель** — `dataPanelDivider` (1px, на всю ширину).
+6. **Тело** (`dataPanelBody`): отступы **симметрично** (`padding: 14px 16px`), `flex` колонка с `gap: 12px`; таблица + пагинация.
+
+## Стили и код
+
+- Общие классы: **`frontend/src/pages/DataPanelLayout.module.css`**.
+- Обертка для типичной списочной страницы: **`ListPageDataPanel`** (`frontend/src/components/ListPageDataPanel.jsx`) — заголовок страницы переносится **внутрь** карточки (один `<h1>` на страницу).
+- Поля ввода в тулбаре: `Form.module.css` → `input` + класс **`filterControl`**; поиск — ещё **`listPageSearch`** при необходимости.
+- Селекты, совместимые по высоте с полями: **`TableToolbar.module.css`** → `filterSelect`.
+- Кнопка экспорта: **`TableToolbar.module.css`** → `btnExport`.
+- Обёртка таблицы: `Table.module.css` → `tableWrap` + **`dataPanelTableWrap`** из `DataPanelLayout` (как на `ProductDetailsPage`).
+
+## Правила UX
+
+- Не дублировать заголовок: убрать отдельный `<h1>` в `pageHead`, если он совпадает с заголовком в карточке.
+- Фильтры привязывать к **данным таблицы** (разные вкладки — свои поля поиска/подписи периода, см. карточку товара).
+- Пресеты дат и «Сброс» — по смыслу вкладки/страницы; сброс очищает и период, и текстовый поиск, если так задумано.
+
+## Чего избегать
+
+- Отдельная «вторая карточка» только под фильтры над таблицей.
+- `pageBody` с ненулевым `gap` как родитель тулбара и разделителя (получается лишняя полоса по вертикали).

@@ -1,0 +1,183 @@
+.productsTable td {
+  vertical-align: middle;
+  height: 56px;
+}
+
+.productsTable tbody tr {
+  min-height: 56px;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background 0.15s ease;
+}
+
+.productsTable tbody tr:hover {
+  background: rgba(var(--accent-rgb), 0.04) !important;
+}
+
+html[data-theme='light'] .productsTable tbody tr:hover {
+  background: rgba(var(--accent-rgb), 0.06) !important;
+}
+
+/* Checkbox column */
+.checkboxCol {
+  width: 3.5rem; /* 56px */
+  text-align: center;
+  padding: 0 0.5rem;
+}
+
+.checkboxCol input[type='checkbox'] {
+  width: 1.125rem; /* 18px */
+  height: 1.125rem;
+  cursor: pointer;
+  accent-color: #1b6b4a;
+}
+
+/* Photo column — 40×40 with rounded corners and cover */
+.photoFrame {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 0.5rem; /* 8px */
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface) 94%, #e2e8f0 6%);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0.5rem;
+}
+
+/* SKU — monospace, 12px, gray-500 */
+.sku {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.75rem; /* 12px */
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: rgba(107, 114, 128, 0.9); /* gray-500 */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Name — 14px semibold, clickable */
+.name {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.name:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+/* Category pill */
+.categoryPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px; /* fully rounded */
+  background: rgba(var(--accent-rgb), 0.12);
+  color: var(--accent);
+  font-size: 0.8125rem; /* 13px */
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.categoryPill:hover {
+  background: rgba(var(--accent-rgb), 0.18);
+  text-decoration: none;
+}
+
+/* Category column */
+.categoryTd {
+  padding: 0.5rem 0.75rem;
+}
+
+/* Amount column — right aligned, tabular nums */
+.amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* Actions column — 3-dot menu */
+.actions {
+  white-space: nowrap;
+  padding-right: 0.5rem;
+}
+
+.actions button {
+  min-width: unset;
+  padding: 0;
+}
+
+.searchInput {
+  width: 260px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.pageSizePicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 16px;
+}
+
+.pageSizeSelect {
+  min-width: 70px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.productsTableScrollWrap {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.productsTable thead th.actionsCol,
+.productsTable tbody td.actionsCol {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  box-shadow: -8px 0 14px -10px rgba(0, 0, 0, 0.45);
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+}
+
+.productsTable thead th.actionsCol {
+  z-index: 3;
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+.productsTable tbody tr td.actionsCol {
+  background: var(--glass-bg);
+}
+
+.productsTable tbody tr:hover td.actionsCol {
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+html[data-theme='light'] .productsTable tbody tr td.actionsCol {
+  background: var(--glass-bg);
+}
+
+html[data-theme='light'] .productsTable tbody tr:hover td.actionsCol {
+  background: rgba(var(--accent-rgb), 0.06);
+}

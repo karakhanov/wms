@@ -88,6 +88,7 @@ export default function QuickZoneModal({ open, onClose, onCreated, defaultWareho
         title={t('warehouse.newZone')}
         onClose={closeMainOrNested}
         stacked={outerStacked === false ? false : outerStacked}
+        drawer
       >
         <form onSubmit={handleSubmit} className={`${formStyles.form} ${formStyles.formModal}`}>
           {error && <div className={formStyles.error}>{error}</div>}

@@ -5,7 +5,7 @@
 from django.conf import settings
 from django.db import models
 from users.models import AuditModel
-from products.models import Product
+from products.models import Product, Service
 from warehouse.models import Cell
 from stock.models import StockBalance
 from construction.models import ConstructionObject
@@ -86,7 +86,12 @@ class MaterialRequest(AuditModel):
 
 class MaterialRequestItem(AuditModel):
     request = models.ForeignKey(MaterialRequest, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="material_request_items")
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="material_request_items", null=True, blank=True
+    )
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, related_name="material_request_items", null=True, blank=True
+    )
     quantity = models.DecimalField("Количество", max_digits=14, decimal_places=3)
     issued_quantity = models.DecimalField("Выдано", max_digits=14, decimal_places=3, default=0)
 
@@ -176,7 +181,12 @@ class IssueNoteItem(AuditModel):
         null=True,
         blank=True,
     )
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="issue_note_items")
+    product = models.ForeignKey(
+        Product, on_delete=models.PROTECT, related_name="issue_note_items", null=True, blank=True
+    )
+    service = models.ForeignKey(
+        Service, on_delete=models.PROTECT, related_name="issue_note_items", null=True, blank=True
+    )
     quantity = models.DecimalField("Количество", max_digits=14, decimal_places=3)
     actual_quantity = models.DecimalField(
         "Фактически принято", max_digits=14, decimal_places=3, null=True, blank=True

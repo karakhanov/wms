@@ -3,16 +3,38 @@ import { useTranslation } from 'react-i18next'
 import { users as usersApi } from '../api'
 import { useAuth } from '../auth'
 import { canViewHistory, isAdmin } from '../permissions'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { downloadCsv } from '../utils/csvExport'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { actionLogDateParams } from '../utils/historyApiParams'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 import styles from './Table.module.css'
+import hStyles from './History.module.css'
+import { friendlyHistoryAction, historyActionTooltip } from '../utils/historyActionLabel'
+
+function methodBadgeClass(method, hs) {
+  const m = (method || '').toUpperCase()
+  if (m === 'GET' || m === 'HEAD') return hs.methodGet
+  if (m === 'POST') return hs.methodPost
+  if (m === 'PUT' || m === 'PATCH') return hs.methodPut
+  if (m === 'DELETE') return hs.methodDelete
+  if (m === 'VIEW') return hs.methodView
+  return hs.methodDefault
+}
+
+function statusCodeBadgeClass(code, hs) {
+  const n = Number(code)
+  if (!Number.isFinite(n)) return hs.statusOther
+  if (n >= 200 && n < 300) return hs.status2xx
+  if (n >= 400 && n < 500) return hs.status4xx
+  if (n >= 500 && n < 600) return hs.status5xx
+  return hs.statusOther
+}
 
 export default function History() {
   const { t } = useTranslation()
@@ -35,6 +57,7 @@ export default function History() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState('desc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const debouncedSearch = useDebouncedValue(search, 300)
   const [facetPages, setFacetPages] = useState([])
   const [facetDevices, setFacetDevices] = useState([])
@@ -117,14 +140,6 @@ export default function History() {
     setSortDir('asc')
   }
 
-  const actionLabel = (row) => {
-    if (row.action === 'AUTH_LOGIN') return t('history.authLogin')
-    if (row.action === 'AUTH_LOGOUT') return t('history.authLogout')
-    if (row.action === 'AUTH_LOGIN_FAILED') return t('history.authLoginFailed')
-    if (row.action === 'PAGE_VIEW') return t('history.pageView')
-    return row.action
-  }
-
   const pageLabel = (row) => row?.details?.page_path || row.page || row.model_name || t('common.none')
 
   const exportCsv = async () => {
@@ -144,7 +159,7 @@ export default function History() {
     downloadCsv(
       `history-${new Date().toISOString().slice(0, 10)}.csv`,
       [t('history.time'), t('history.user'), t('history.page'), t('history.action'), t('history.method'), t('history.statusCode'), t('history.ip'), t('history.device')],
-      list.map((r) => [r.created_at?.slice(0, 19), r.created_by_username, pageLabel(r), actionLabel(r), r.method, r.status_code, r.ip_address, r.device])
+      list.map((r) => [r.created_at?.slice(0, 19), r.created_by_username, pageLabel(r), friendlyHistoryAction(r, t), r.method, r.status_code, r.ip_address, r.device])
     )
   }
 
@@ -152,102 +167,121 @@ export default function History() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('history.title')}</h1>
-        </div>
-      </div>
-
-      <TableToolbar search={search} onSearchChange={(v) => { setSearch(v); setPage(1) }} onExport={exportCsv} exportDisabled={loading}>
-        {admin && (
-          <select className={toolbarStyles.filterSelect} value={userFilter} onChange={(e) => { setUserFilter(e.target.value); setPage(1) }}>
-            <option value="">{t('history.allUsers')}</option>
-            {usersList.map((u) => <option key={u.id} value={u.id}>{u.username}</option>)}
-          </select>
+      <ListPageDataPanel
+        flushTop
+        title={t('history.title')}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
         )}
-        <select className={toolbarStyles.filterSelect} value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value); setPage(1) }}>
-          <option value="">{t('history.allMethods')}</option>
-          <option value="GET">GET</option>
-          <option value="POST">POST</option>
-          <option value="PUT">PUT</option>
-          <option value="PATCH">PATCH</option>
-          <option value="DELETE">DELETE</option>
-          <option value="VIEW">VIEW</option>
-        </select>
-        <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
-          <option value="">{t('history.allTime')}</option>
-          <option value="today">{t('common.today')}</option>
-          <option value="week">{t('common.thisWeek')}</option>
-          <option value="month">{t('common.thisMonth')}</option>
-          <option value="custom">{t('common.customRange')}</option>
-        </select>
-        {datePreset === 'custom' ? (
-          <>
-            <input className={toolbarStyles.filterSelect} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
-            <input className={toolbarStyles.filterSelect} type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
-          </>
-        ) : null}
-        <select className={toolbarStyles.filterSelect} value={pageFilter} onChange={(e) => { setPageFilter(e.target.value); setPage(1) }}>
-          <option value="">{t('history.allPages')}</option>
-          {pageOptions.map((p) => <option key={p} value={p}>{p}</option>)}
-        </select>
-        <select className={toolbarStyles.filterSelect} value={deviceFilter} onChange={(e) => { setDeviceFilter(e.target.value); setPage(1) }}>
-          <option value="">{t('history.allDevices')}</option>
-          {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <label className={toolbarStyles.filterSelect} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}>
-          <input type="checkbox" checked={authOnly} onChange={(e) => { setAuthOnly(e.target.checked); setPage(1) }} />
-          {t('history.authOnly')}
-        </label>
-      </TableToolbar>
-
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('history.time')} sortKey="created_at" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('history.user')} sortKey="created_by" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('history.page')} sortKey="page" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <th>{t('history.action')}</th>
-                  <SortHeader className={styles.sortableHeader} label={t('history.method')} sortKey="method" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('history.statusCode')} sortKey="status_code" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <th>{t('history.ip')}</th>
-                  <SortHeader className={styles.sortableHeader} label={t('history.device')} sortKey="device" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.created_at?.slice(0, 19).replace('T', ' ')}</td>
-                    <td>{r.created_by_username || t('common.none')}</td>
-                    <td>{pageLabel(r)}</td>
-                    <td title={r.user_agent || ''}>{actionLabel(r)}</td>
-                    <td>{r.method || t('common.none')}</td>
-                    <td>{r.status_code || t('common.none')}</td>
-                    <td>{r.ip_address || t('common.none')}</td>
-                    <td>{r.device || t('common.none')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        filters={(
+          <div className={hStyles.historyToolbarInner}>
+            <div className={hStyles.historySearchWrap}>
+              <ToolbarSearchInput
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value)
+                  setPage(1)
+                }}
+                placeholder={t('common.searchPlaceholder')}
+                aria-label={t('common.searchPlaceholder')}
+              />
+            </div>
+            {admin && (
+              <ToolbarFilterSelect value={userFilter} onChange={(e) => { setUserFilter(e.target.value); setPage(1) }}>
+                <option value="">{t('history.allUsers')}</option>
+                {usersList.map((u) => <option key={u.id} value={u.id}>{u.username}</option>)}
+              </ToolbarFilterSelect>
+            )}
+            <ToolbarFilterSelect value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value); setPage(1) }}>
+              <option value="">{t('history.allMethods')}</option>
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+              <option value="DELETE">DELETE</option>
+              <option value="VIEW">VIEW</option>
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
+              <option value="">{t('history.allTime')}</option>
+              <option value="today">{t('common.today')}</option>
+              <option value="week">{t('common.thisWeek')}</option>
+              <option value="month">{t('common.thisMonth')}</option>
+              <option value="custom">{t('common.customRange')}</option>
+            </ToolbarFilterSelect>
+            {datePreset === 'custom' ? (
+              <>
+                <ToolbarFilterDateInput type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
+                <ToolbarFilterDateInput type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+              </>
+            ) : null}
+            <ToolbarFilterSelect value={pageFilter} onChange={(e) => { setPageFilter(e.target.value); setPage(1) }}>
+              <option value="">{t('history.allPages')}</option>
+              {pageOptions.map((p) => <option key={p} value={p}>{p}</option>)}
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={deviceFilter} onChange={(e) => { setDeviceFilter(e.target.value); setPage(1) }}>
+              <option value="">{t('history.allDevices')}</option>
+              {deviceOptions.map((d) => <option key={d} value={d}>{d}</option>)}
+            </ToolbarFilterSelect>
+            <label className={`${panelStyles.toolbarControl} ${panelStyles.toolbarCheckboxLabel}`}>
+              <input type="checkbox" checked={authOnly} onChange={(e) => { setAuthOnly(e.target.checked); setPage(1) }} />
+              {t('history.authOnly')}
+            </label>
           </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
-              page={page}
-              pageCount={pages}
-              total={count}
-              onPageChange={setPage}
-              pageSize={pageSize}
-              onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
-              disabled={loading}
-            />
-          </div>
-        </div>
-      )}
+        )}
+      >
+        <DataTable
+          columns={[
+            { key: 'time', header: <SortHeader className={styles.sortableHeader} label={t('history.time')} sortKey="created_at" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'user', header: <SortHeader className={styles.sortableHeader} label={t('history.user')} sortKey="created_by" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'page', header: <SortHeader className={styles.sortableHeader} label={t('history.page')} sortKey="page" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'action', header: t('history.action') },
+            { key: 'method', header: <SortHeader className={styles.sortableHeader} label={t('history.method')} sortKey="method" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'status_code', header: <SortHeader className={styles.sortableHeader} label={t('history.statusCode')} sortKey="status_code" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'ip', header: t('history.ip') },
+            { key: 'device', header: <SortHeader className={styles.sortableHeader} label={t('history.device')} sortKey="device" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+          ]}
+          rows={rows}
+          rowKey="id"
+          selection={{
+            selectedIds,
+            onToggleAll: (checked) => setSelectedIds(checked ? new Set(rows.map((r) => r.id)) : new Set()),
+            onToggleOne: (id, checked) => {
+              const next = new Set(selectedIds)
+              if (checked) next.add(id)
+              else next.delete(id)
+              setSelectedIds(next)
+            },
+          }}
+          renderCell={(r, col) => {
+            const actionTip = historyActionTooltip(r)
+            const friendlyAction = friendlyHistoryAction(r, t)
+            if (col.key === 'time') return r.created_at?.slice(0, 19).replace('T', ' ')
+            if (col.key === 'user') return r.created_by_username || t('common.none')
+            if (col.key === 'page') return pageLabel(r)
+            if (col.key === 'action') return <span className={hStyles.actionCol} title={actionTip || undefined}>{friendlyAction}</span>
+            if (col.key === 'method') return r.method ? <span className={`${hStyles.methodBadge} ${methodBadgeClass(r.method, hStyles)}`}>{r.method}</span> : t('common.none')
+            if (col.key === 'status_code') return r.status_code != null && r.status_code !== '' ? <span className={`${hStyles.statusBadge} ${statusCodeBadgeClass(r.status_code, hStyles)}`}>{r.status_code}</span> : t('common.none')
+            if (col.key === 'ip') return <span title={r.user_agent || undefined}>{r.ip_address || t('common.none')}</span>
+            if (col.key === 'device') return r.device || t('common.none')
+            return null
+          }}
+          page={page}
+          pageCount={pages}
+          total={count}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          disabled={loading}
+          bulkActions={
+            <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+              {t('common.exportExcel')}
+            </button>
+          }
+        />
+      </ListPageDataPanel>
     </div>
   )
 }

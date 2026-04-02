@@ -4,14 +4,15 @@ import { users as usersApi, construction as constructionApi } from '../api'
 import { useAuth } from '../auth'
 import { canCreateUser, canViewUsers, getRole, isAdmin } from '../permissions'
 import Modal from '../components/Modal'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect } from '../components/ToolbarControls'
 import styles from './Table.module.css'
 import formStyles from './Form.module.css'
 
@@ -28,6 +29,7 @@ export default function Users() {
   const [roleId, setRoleId] = useState('')
   const [sortKey, setSortKey] = useState('username')
   const [sortDir, setSortDir] = useState('asc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const [objects, setObjects] = useState([])
   const [assignOpen, setAssignOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
@@ -211,7 +213,7 @@ export default function Users() {
   return (
     <div className={styles.page}>
       {canManageAssignments && (
-        <Modal open={assignOpen} title={t('users.assignObjects')} onClose={() => setAssignOpen(false)}>
+        <Modal open={assignOpen} title={t('users.assignObjects')} onClose={() => setAssignOpen(false)} drawer>
           <form onSubmit={saveAssignments} className={`${formStyles.form} ${formStyles.formModal}`}>
             <div className={formStyles.row}>
               <label>{t('users.user')}</label>
@@ -262,7 +264,7 @@ export default function Users() {
         </Modal>
       )}
       {canOpenCreate && (
-        <Modal open={createOpen} title={t('users.createUser')} onClose={() => setCreateOpen(false)}>
+        <Modal open={createOpen} title={t('users.createUser')} onClose={() => setCreateOpen(false)} drawer>
           <form onSubmit={saveCreateUser} className={`${formStyles.form} ${formStyles.formModal}`}>
             <div className={formStyles.row}>
               <label>{t('users.username')}</label>
@@ -350,85 +352,99 @@ export default function Users() {
           </form>
         </Modal>
       )}
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('users.title')}</h1>
-        </div>
-        {canOpenCreate && (
+      <ListPageDataPanel
+        flushTop
+        title={t('users.title')}
+        leadExtra={canOpenCreate ? (
           <button type="button" className={styles.btnAdd} onClick={openCreateModal}>
             {t('users.createUser')}
           </button>
+        ) : null}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
         )}
-      </div>
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
+          <ToolbarFilterSelect
+            value={roleId}
+            onChange={(e) => {
+              setRoleId(e.target.value)
+              setPage(1)
+            }}
+            aria-label={t('users.role')}
+          >
+            <option value="">{t('common.all')}</option>
+            {roles.map((r) => (
+              <option key={r.id} value={String(r.id)}>
+                {r.name}
+              </option>
+            ))}
+          </ToolbarFilterSelect>
+        )}
       >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={roleId}
-          onChange={(e) => {
-            setRoleId(e.target.value)
-            setPage(1)
+        <DataTable
+          columns={[
+            { key: 'username', header: <SortHeader className={styles.sortableHeader} label={t('users.username')} sortKey="username" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'full_name', header: <SortHeader className={styles.sortableHeader} label={t('users.fullName')} sortKey="full_name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'role', header: <SortHeader className={styles.sortableHeader} label={t('users.role')} sortKey="role" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'objects', header: <SortHeader className={styles.sortableHeader} label={t('users.assignedObjects')} sortKey="objects" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            ...(canManageAssignments ? [{ key: 'actions', header: t('common.actions') }] : []),
+          ]}
+          rows={sortedRows}
+          rowKey="id"
+          selection={{
+            selectedIds,
+            onToggleAll: (checked) => setSelectedIds(checked ? new Set(sortedRows.map((u) => u.id)) : new Set()),
+            onToggleOne: (id, checked) => {
+              const next = new Set(selectedIds)
+              if (checked) next.add(id)
+              else next.delete(id)
+              setSelectedIds(next)
+            },
           }}
-          aria-label={t('users.role')}
-        >
-          <option value="">{t('common.all')}</option>
-          {roles.map((r) => (
-            <option key={r.id} value={String(r.id)}>
-              {r.name}
-            </option>
-          ))}
-        </select>
-      </TableToolbar>
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('users.username')} sortKey="username" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('users.fullName')} sortKey="full_name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('users.role')} sortKey="role" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('users.assignedObjects')} sortKey="objects" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  {canManageAssignments && <th>{t('common.actions')}</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.username}</td>
-                    <td>{u.full_name || t('common.none')}</td>
-                    <td>{u.role_display || u.role_name || t('common.none')}</td>
-                    <td>{(u.assigned_object_names || []).join(', ') || t('common.none')}</td>
-                    {canManageAssignments && (
-                      <td className={styles.actions}>
-                        {getRole(u) === 'foreman' ? (
-                          <button type="button" className={styles.btnSm} onClick={() => openAssignModal(u)}>
-                            {t('users.assignObjects')}
-                          </button>
-                        ) : (
-                          t('common.none')
-                        )}
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar page={page} pageCount={pages} total={count} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} disabled={loading} />
-          </div>
-        </div>
-      )}
+          renderCell={(u, col) => {
+            if (col.key === 'username') return u.username
+            if (col.key === 'full_name') return u.full_name || t('common.none')
+            if (col.key === 'role') return u.role_display || u.role_name || t('common.none')
+            if (col.key === 'objects') return (u.assigned_object_names || []).join(', ') || t('common.none')
+            if (col.key === 'actions' && canManageAssignments) {
+              return getRole(u) === 'foreman' ? (
+                <button type="button" className={styles.btnSm} onClick={() => openAssignModal(u)}>
+                  {t('users.assignObjects')}
+                </button>
+              ) : (
+                t('common.none')
+              )
+            }
+            return null
+          }}
+          page={page}
+          pageCount={pages}
+          total={count}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          disabled={loading}
+          bulkActions={
+            <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+              {t('common.exportExcel')}
+            </button>
+          }
+        />
+      </ListPageDataPanel>
     </div>
   )
 }

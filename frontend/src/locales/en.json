@@ -7,7 +7,27 @@
     "version": "Version {{version}}",
     "sidebarHint": "Corporate warehouse accounting for Bashkent",
     "readyPickupTitle": "Issue notes ready for pickup: {{count}}",
-    "readyPickupNavTitle": "Ready for pickup: {{count}}"
+    "readyPickupNavTitle": "Ready for pickup: {{count}}",
+    "breadcrumb": {
+      "details": "Details",
+      "unknown": "Section",
+      "aria": "Section navigation"
+    },
+    "notificationsEmpty": "No unread notifications",
+    "notificationsViewAll": "All notifications",
+    "notificationsLoadError": "Could not load notifications",
+    "profileSettings": "Profile settings",
+    "userMenu": "User menu",
+    "notificationsMenu": "Notifications",
+    "navGroups": {
+      "group1": "Dashboard",
+      "group2": "Directories",
+      "group3": "Objects & Limits",
+      "group4": "Documents",
+      "group5": "Warehouse Operations",
+      "group6": "Reports",
+      "group7": "Administration"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -15,6 +35,7 @@
     "categories": "Categories",
     "warehouse": "Warehouse",
     "objects": "Objects",
+    "services": "Services",
     "suppliers": "Suppliers",
     "receipts": "Receipts",
     "orders": "Shipments",
@@ -27,6 +48,49 @@
     "issueNotes": "Issue Notes",
     "notifications": "Notifications",
     "history": "History"
+    ,"objectLimits": "Object Limits"
+    ,"objectTypes": "Object Types"
+    ,"about": "About",
+    "profilePage": "Profile"
+  },
+  "profile": {
+    "lead": "Basic information about your account.",
+    "displayName": "Display name",
+    "contactAdmin": "To change your login, role, or password, contact an administrator."
+  },
+  "about": {
+    "title": "About",
+    "intro": "Bashkent WMS: corporate warehouse accounting for products, documents, construction objects, and limits."
+  },
+  "objectDetails": {
+    "notSet": "Not set",
+    "uploadPhoto": "Upload photo",
+    "backToObjects": "Back to objects",
+    "noPhotoYet": "No photo yet",
+    "fieldCode": "Code",
+    "fieldType": "Type",
+    "fieldAddress": "Address",
+    "fieldLimitAmount": "Amount limit",
+    "fieldLimitQty": "Quantity limit",
+    "tabOverview": "Overview",
+    "tabLimits": "Limits",
+    "tabProducts": "Products",
+    "tabServices": "Services",
+    "tabUtilization": "Utilization",
+    "tabsAria": "Object card sections",
+    "addLimit": "Add limit",
+    "addLimitNeedType": "Assign an object type first to edit type limits",
+    "limitsEmptyTitle": "No limits added",
+    "limitsEmptyHint": "Limits are configured on the object type. Open the type editor and add line items with quantity limits.",
+    "limitsFilteredEmpty": "No items in this section",
+    "colKind": "Kind",
+    "colPosition": "Item",
+    "colLimit": "Limit",
+    "colUsed": "Used",
+    "colRemaining": "Remaining",
+    "colPercent": "Utilization",
+    "kindProduct": "Product",
+    "kindService": "Service"
   },
   "login": {
     "title": "Bashkent WMS",
@@ -55,7 +119,11 @@
     "send": "Send",
     "cancel": "Cancel",
     "back": "Back",
+    "forward": "Next",
     "confirmDelete": "Delete this record?",
+    "confirmDeleteTitle": "Confirm deletion",
+    "confirmDeleteBody": "Are you sure you want to delete “{{name}}”? This action cannot be undone.",
+    "recordFallback": "this record",
     "photo": "Photo",
     "closeDialog": "Close",
     "search": "Search",
@@ -84,7 +152,12 @@
     "rowsPerPage": "Rows per page",
     "toggleSidebar": "Toggle sidebar",
     "menu": "Menu",
-    "pageNumber": "Page {{page}}"
+    "pageNumber": "Page {{page}}",
+    "noData": "No data",
+    "emptyStateHintWithAdd": "Add the first record using the «+ {{addLabel}}» button at the top of the page.",
+    "emptyStateHintList": "No records yet. Create a document in your workflow or adjust filters.",
+    "emptyStateFiltered": "No records match the selected filters.",
+    "reportsEmptyHint": "No rows for this report with the current data or search."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -109,6 +182,12 @@
     "kpiTransfers": "Transfers",
     "kpiInventory": "Inventories open / total",
     "kpiShortage": "Below minimum",
+    "kpiReceiptsPeriod": "Receipts period",
+    "kpiOrdersPeriod": "Shipments period",
+    "kpiActiveOrders": "Active orders",
+    "kpiTransfersPeriod": "Transfers",
+    "kpiOpenInventories": "Open inventories",
+    "kpiBelowMin": "Positions below minimum",
     "recentReceipts": "Latest receipts",
     "recentOrders": "Latest orders",
     "colDoc": "Doc",
@@ -125,7 +204,26 @@
     "shortageEmpty": "All SKUs above minimum",
     "openReports": "Reports",
     "modulesTitle": "Sections",
-    "loadError": "Some data failed to load — check API access"
+    "popularEmpty": "No shipments yet",
+    "recentNotifications": "Notifications",
+    "notificationsEmpty": "No notifications",
+    "loadError": "Some data failed to load — check API access",
+    "receiptsVsOrders": "Receipts vs Shipments by days",
+    "receipts": "Receipts",
+    "orders": "Shipments",
+    "topProducts": "Top-10 products by shipments",
+    "byQuantity": "By quantity",
+    "bySum": "By sum",
+    "noShipments": "No shipments in period",
+    "stockByCategory": "Stock structure by categories",
+    "criticalStock": "Critical stock (below minimum)",
+    "showAll": "Show all",
+    "allPositionsOk": "✓ All positions OK",
+    "alert": "Critical",
+    "operational": "Operations",
+    "shortageDanger": "Shortage",
+    "shortageOk": "OK",
+    "summarySub": "Based on data for the selected period"
   },
   "products": {
     "title": "Products",
@@ -211,7 +309,10 @@
     "updatedAt": "Updated",
     "emptyList": "No stock records yet.",
     "emptyFiltered": "No rows match search or warehouse filter.",
-    "loadError": "Could not load stock balances. Check your connection and permissions."
+    "loadError": "Could not load stock balances. Check your connection and permissions.",
+    "warehouseZone": "Warehouse / zone",
+    "columns": "Columns",
+    "columnsTitle": "Visible columns"
   },
   "transfers": {
     "title": "Transfers",
@@ -545,7 +646,13 @@
     "authLogout": "Logout",
     "authLoginFailed": "Failed login",
     "allPages": "All sections",
-    "pageView": "Page view",
+    "pageView": "Page navigation",
+    "actionListView": "List view",
+    "actionCreateRecord": "Create record",
+    "actionUpdateRecord": "Update record",
+    "actionDeleteRecord": "Delete record",
+    "apiTooltip": "Hover the cell to see the technical API request (method and path).",
+    "actionOther": "API request",
     "allTime": "All time",
     "period24h": "Last 24 hours",
     "period7d": "Last 7 days",

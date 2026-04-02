@@ -1,16 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { inventory as inventoryApi, warehouse as warehouseApi } from '../api'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
+import EmptyState from '../components/EmptyState'
 import SortHeader from '../components/SortHeader'
 import StatusBadge from '../components/StatusBadge'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { inDateRange } from '../utils/dateFilter'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 import styles from './Table.module.css'
 
 export default function Inventory() {
@@ -29,6 +31,7 @@ export default function Inventory() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState('desc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   useEffect(() => {
     warehouseApi
@@ -79,6 +82,12 @@ export default function Inventory() {
   }, [rows, sortKey, sortDir])
   const count = tableData.count ?? rows.length
   const pages = totalPages(count, pageSize)
+  const rawOnPage = (tableData.results || []).length
+  const listEmptyHint = useMemo(() => {
+    if (sortedRows.length > 0) return ''
+    if (rawOnPage > 0) return t('common.emptyStateFiltered')
+    return t('common.emptyStateHintList')
+  }, [sortedRows.length, rawOnPage, t])
   const toggleSort = (key) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -116,89 +125,108 @@ export default function Inventory() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.h1}>{t('inventory.title')}</h1>
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
-      >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={warehouseId}
-          onChange={(e) => {
-            setWarehouseId(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('inventory.warehouse')}
-        >
-          <option value="">{t('common.all')}</option>
-          {warehouses.map((w) => (
-            <option key={w.id} value={String(w.id)}>
-              {w.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className={toolbarStyles.filterSelect}
-          value={completed}
-          onChange={(e) => {
-            setCompleted(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('inventory.completed')}
-        >
-          <option value="">{t('common.all')}</option>
-          <option value="false">{t('common.open')}</option>
-          <option value="true">{t('common.completed')}</option>
-        </select>
-        <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
-          <option value="">{t('common.allTime')}</option>
-          <option value="today">{t('common.today')}</option>
-          <option value="week">{t('common.thisWeek')}</option>
-          <option value="month">{t('common.thisMonth')}</option>
-          <option value="custom">{t('common.customRange')}</option>
-        </select>
-        {datePreset === 'custom' ? (
+      <ListPageDataPanel
+        flushTop
+        title={t('inventory.title')}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
           <>
-            <input className={toolbarStyles.filterSelect} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
-            <input className={toolbarStyles.filterSelect} type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+            <ToolbarFilterSelect
+              value={warehouseId}
+              onChange={(e) => {
+                setWarehouseId(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('inventory.warehouse')}
+            >
+              <option value="">{t('common.all')}</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={String(w.id)}>
+                  {w.name}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect
+              value={completed}
+              onChange={(e) => {
+                setCompleted(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('inventory.completed')}
+            >
+              <option value="">{t('common.all')}</option>
+              <option value="false">{t('common.open')}</option>
+              <option value="true">{t('common.completed')}</option>
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
+              <option value="">{t('common.allTime')}</option>
+              <option value="today">{t('common.today')}</option>
+              <option value="week">{t('common.thisWeek')}</option>
+              <option value="month">{t('common.thisMonth')}</option>
+              <option value="custom">{t('common.customRange')}</option>
+            </ToolbarFilterSelect>
+            {datePreset === 'custom' ? (
+              <>
+                <ToolbarFilterDateInput type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
+                <ToolbarFilterDateInput type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+              </>
+            ) : null}
           </>
-        ) : null}
-      </TableToolbar>
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('inventory.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('inventory.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('inventory.warehouse')} sortKey="warehouse" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('inventory.completed')} sortKey="completed" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((inv) => (
-                  <tr key={inv.id}>
-                    <td>{inv.id}</td>
-                    <td>{inv.created_at?.slice(0, 10)}</td>
-                    <td>{inv.warehouse_name || t('common.none')}</td>
-                    <td>
-                      <StatusBadge value={inv.is_completed ? t('common.yes') : t('common.no')} toneValue={inv.is_completed ? 'completed' : 'open'} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
+        )}
+      >
+        <div className={styles.listTableShell}>
+          {sortedRows.length === 0 ? (
+            <EmptyState hint={listEmptyHint} compact />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'id', header: <SortHeader className={styles.sortableHeader} label={t('inventory.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'date', header: <SortHeader className={styles.sortableHeader} label={t('inventory.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'warehouse', header: <SortHeader className={styles.sortableHeader} label={t('inventory.warehouse')} sortKey="warehouse" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'completed', header: <SortHeader className={styles.sortableHeader} label={t('inventory.completed')} sortKey="completed" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+              ]}
+              rows={sortedRows}
+              rowKey="id"
+              selection={{
+                selectedIds,
+                onToggleAll: (checked) => setSelectedIds(checked ? new Set(sortedRows.map((inv) => inv.id)) : new Set()),
+                onToggleOne: (id, checked) => {
+                  const next = new Set(selectedIds)
+                  if (checked) next.add(id)
+                  else next.delete(id)
+                  setSelectedIds(next)
+                },
+              }}
+              renderCell={(inv, col) => {
+                if (col.key === 'id') return inv.id
+                if (col.key === 'date') return inv.created_at?.slice(0, 10)
+                if (col.key === 'warehouse') return inv.warehouse_name || t('common.none')
+                if (col.key === 'completed') {
+                  return (
+                    <StatusBadge
+                      value={inv.is_completed ? t('common.yes') : t('common.no')}
+                      toneValue={inv.is_completed ? 'completed' : 'open'}
+                    />
+                  )
+                }
+                return null
+              }}
               page={page}
               pageCount={pages}
               total={count}
@@ -206,10 +234,15 @@ export default function Inventory() {
               pageSize={pageSize}
               onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
               disabled={loading}
+              bulkActions={
+                <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+                  {t('common.exportExcel')}
+                </button>
+              }
             />
-          </div>
+          )}
         </div>
-      )}
+      </ListPageDataPanel>
     </div>
   )
 }

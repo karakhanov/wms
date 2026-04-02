@@ -56,3 +56,22 @@ class Product(AuditModel):
 
     def __str__(self):
         return f"{self.name} ({self.sku})"
+
+
+class Service(AuditModel):
+    """Услуга для использования в заявках и накладных."""
+
+    name = models.CharField("Название", max_length=255)
+    code = models.CharField("Код", max_length=100, unique=True, db_index=True)
+    unit = models.CharField("Единица измерения", max_length=20, default="усл.")
+    description = models.TextField("Описание", blank=True)
+    amount = models.DecimalField("Сумма", max_digits=14, decimal_places=2, default=0)
+    is_active = models.BooleanField("Активна", default=True)
+
+    class Meta:
+        verbose_name = "Услуга"
+        verbose_name_plural = "Услуги"
+        ordering = ["name"]
+
+    def __str__(self):
+        return f"{self.name} ({self.code})"

@@ -28,10 +28,11 @@ import {
   isForeman,
 } from '../permissions'
 import Modal from '../components/Modal'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
 import StatusBadge from '../components/StatusBadge'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 import { downloadCsv } from '../utils/csvExport'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import PaginationBar from '../components/PaginationBar'
@@ -43,6 +44,7 @@ import { inDateRange } from '../utils/dateFilter'
 import { issueNoteStatusLabel } from '../utils/statusLabel'
 import { IconChevronDown } from '../ui/Icons'
 import tableStyles from './Table.module.css'
+import panelStyles from './DataPanelLayout.module.css'
 import formStyles from './Form.module.css'
 import styles from './IssueNotes.module.css'
 
@@ -79,6 +81,18 @@ function formatSupplierComboLabel(s) {
   if (!s) return ''
   const base = (s.name || `#${s.id}`).trim()
   return s.inn ? `${base} · ${s.inn}` : base
+}
+
+function issueLineLabel(it, t) {
+  if (!it) return t('common.none')
+  if (it.service || it.service_name || it.service_code) {
+    return `${it.service_code ? `${it.service_code} - ` : ''}${it.service_name || t('common.none')}`
+  }
+  return `${it.product_sku ? `${it.product_sku} - ` : ''}${it.product_name || t('common.none')}`
+}
+
+function isServiceLine(it) {
+  return Boolean(it?.service || it?.service_name || it?.service_code)
 }
 
 function computeDefaultProcurementItemIds(note, itemShortageByItemId) {
@@ -151,7 +165,8 @@ export default function IssueNotes() {
     recipient_id: '',
     comment: '',
   })
-  const [items, setItems] = useState([{ category: '', product: '', quantity: '', comment: '' }])
+  const [items, setItems] = useState([{ kind: 'product', category: '', product: '', service: '', quantity: '', comment: '' }])
+  const [serviceRows, setServiceRows] = useState([])
   const [controllerLines, setControllerLines] = useState([])
   const [controllers, setControllers] = useState([])
   const [assignControllerIds, setAssignControllerIds] = useState([])
@@ -225,12 +240,13 @@ export default function IssueNotes() {
       construction.objects({ page_size: 200 }),
       products.categories({ page_size: 500 }),
       products.list({ page_size: 500 }),
+      products.services({ page_size: 500 }),
       usersApi.managers(),
       usersApi.controllers(),
       suppliersApi.list({ page_size: 500 }),
       ordersApi.issueNoteNextNumber(),
     ])
-      .then(([inRes, objRes, catRes, productRes, managersRes, controllersRes, supRes, nextNumRes]) => {
+      .then(([inRes, objRes, catRes, productRes, serviceRes, managersRes, controllersRes, supRes, nextNumRes]) => {
         if (inRes.status === 'rejected') {
           const d = inRes.reason?.response?.data
           const detail = d?.detail
@@ -248,6 +264,7 @@ export default function IssueNotes() {
         setObjects(objRes.status === 'fulfilled' ? normalizeListResponse(objRes.value).results || [] : [])
         setCategories(catRes.status === 'fulfilled' ? normalizeListResponse(catRes.value).results || [] : [])
         setProductRows(productRes.status === 'fulfilled' ? normalizeListResponse(productRes.value).results || [] : [])
+        setServiceRows(serviceRes.status === 'fulfilled' ? normalizeListResponse(serviceRes.value).results || [] : [])
         const mgrs = managersRes.status === 'fulfilled' ? managersRes.value || [] : []
         setManagers(mgrs)
         setControllers(controllersRes.status === 'fulfilled' ? controllersRes.value || [] : [])
@@ -351,6 +368,7 @@ export default function IssueNotes() {
         const hoverInfo = {}
         rowsWithItems.forEach((note) => {
           const shortages = (note?.items || []).map((it) => {
+            if (!it?.product) return false
             const need = effectiveIssueLineQty(it)
             const total = Number(totals[String(it?.product)] || 0)
             return need > total
@@ -360,9 +378,9 @@ export default function IssueNotes() {
             const pid = String(it?.product || '')
             const need = effectiveIssueLineQty(it)
             const total = Number(totals[pid] || 0)
-            const lack = Math.max(0, need - total)
-            const label = `${it?.product_sku ? `${it.product_sku} - ` : ''}${it?.product_name || t('common.none')}`
-            const warehouses = warehouseMap[pid]?.length ? warehouseMap[pid].join(', ') : t('common.none')
+            const lack = it?.product ? Math.max(0, need - total) : 0
+            const label = issueLineLabel(it, t)
+            const warehouses = it?.product ? (warehouseMap[pid]?.length ? warehouseMap[pid].join(', ') : t('common.none')) : 'Не складская позиция'
             return {
               shortage: lack > 0,
               productLabel: label,
@@ -534,15 +552,17 @@ export default function IssueNotes() {
     setSaving(true)
     try {
       const payloadItems = items
-        .map((it) => {
-          const qty = Number(it.quantity)
-          const pid = Number(it.product)
-          if (!pid || !qty || qty <= 0) return null
-          return {
-            product: pid,
-            quantity: formatQuantity(qty),
-            comment: (it.comment || '').trim(),
+      .map((it) => {
+        const qty = Number(it.quantity)
+        if (!qty || qty <= 0) return null
+        if (it.kind === 'service') {
+            const sid = Number(it.service)
+            if (!sid) return null
+            return { service: sid, quantity: formatQuantity(qty), comment: (it.comment || '').trim() }
           }
+          const pid = Number(it.product)
+          if (!pid) return null
+          return { product: pid, quantity: formatQuantity(qty), comment: (it.comment || '').trim() }
         })
         .filter(Boolean)
 
@@ -560,7 +580,7 @@ export default function IssueNotes() {
         items: payloadItems,
       })
       setForm({ construction_object: '', recipient_id: managers[0] ? String(managers[0].id) : '', comment: '' })
-      setItems([{ category: '', product: '', quantity: '', comment: '' }])
+      setItems([{ kind: 'product', category: '', product: '', service: '', quantity: '', comment: '' }])
       setFormOpen(false)
       await load()
     } catch (err) {
@@ -919,15 +939,15 @@ export default function IssueNotes() {
       noteItems.map((it, idx) => {
         const stockInfo = stockByProduct[String(it.product)] || { total: 0, byWarehouse: [] }
         const need = effectiveIssueLineQty(it)
-        const total = Number(stockInfo.total || 0)
-        const shortage = Math.max(0, need - total)
+        const total = it?.product ? Number(stockInfo.total || 0) : 0
+        const shortage = it?.product ? Math.max(0, need - total) : 0
         return {
           key: it.id || idx,
-          productLabel: `${it.product_sku ? `${it.product_sku} - ` : ''}${it.product_name || t('common.none')}`,
+          productLabel: issueLineLabel(it, t),
           need,
           total,
           shortage,
-          byWarehouse: stockInfo.byWarehouse || [],
+          byWarehouse: it?.product ? (stockInfo.byWarehouse || []) : [],
         }
       }),
     [noteItems, stockByProduct, t]
@@ -952,14 +972,14 @@ export default function IssueNotes() {
       if (!map.has(pid)) {
         map.set(pid, {
           productId: pid,
-          label: `${it.product_sku ? `${it.product_sku} · ` : ''}${it.product_name || `#${pid}`}`,
+          label: issueLineLabel(it, t).replace(' - ', ' · '),
           lines: [],
         })
       }
       map.get(pid).lines.push(it)
     }
     return Array.from(map.values())
-  }, [selectedNote?.items])
+  }, [selectedNote?.items, t])
 
   const apiProcurementItemIdsKey = useMemo(
     () => JSON.stringify(selectedNote?.procurement_item_ids || []),
@@ -973,9 +993,9 @@ export default function IssueNotes() {
     if (!idSet.size) return ''
     const labels = items
       .filter((it) => idSet.has(Number(it.id)))
-      .map((it) => `${it.product_sku ? `${it.product_sku} ` : ''}${it.product_name || ''}`.trim())
+      .map((it) => issueLineLabel(it, t))
     return [...new Set(labels)].filter(Boolean).join('; ')
-  }, [selectedNote?.items, selectedNote?.procurement_item_ids])
+  }, [selectedNote?.items, selectedNote?.procurement_item_ids, t])
 
   useEffect(() => {
     if (!detailsOpen || !selectedNote) {
@@ -1038,7 +1058,7 @@ export default function IssueNotes() {
 
   const productsText = (note) =>
     (note?.items || [])
-      .map((it) => `${it?.product_sku ? `${it.product_sku} - ` : ''}${it?.product_name || ''}`.trim())
+      .map((it) => issueLineLabel(it, t))
       .filter(Boolean)
       .join(', ') || t('common.none')
 
@@ -1331,6 +1351,23 @@ export default function IssueNotes() {
                   <div key={idx} className={styles.itemCard}>
                     <div className={styles.itemGrid}>
                       <div className={styles.field}>
+                        <label className={styles.fieldLabel}>Тип позиции</label>
+                        <select
+                          className={formStyles.select}
+                          value={it.kind || 'product'}
+                          onChange={(e) => {
+                            const value = e.target.value
+                            setItems((prev) =>
+                              prev.map((x, i) => (i === idx ? { ...x, kind: value, category: '', product: '', service: '' } : x))
+                            )
+                          }}
+                        >
+                          <option value="product">Товар</option>
+                          <option value="service">Услуга</option>
+                        </select>
+                      </div>
+                      {(it.kind || 'product') === 'product' && (
+                      <div className={styles.field}>
                         <label className={styles.fieldLabel}>{t('products.category')}</label>
                         <select
                           className={formStyles.select}
@@ -1350,31 +1387,42 @@ export default function IssueNotes() {
                           ))}
                         </select>
                       </div>
+                      )}
                       <div className={styles.field}>
-                        <label className={styles.fieldLabel}>{t('issueNotes.product')}</label>
+                        <label className={styles.fieldLabel}>{(it.kind || 'product') === 'service' ? 'Услуга' : t('issueNotes.product')}</label>
                         <select
                           className={formStyles.select}
-                          value={it.product}
+                          value={(it.kind || 'product') === 'service' ? (it.service || '') : it.product}
                           onChange={(e) => {
                             const value = e.target.value
-                            setItems((prev) => prev.map((x, i) => (i === idx ? { ...x, product: value } : x)))
+                            setItems((prev) => prev.map((x, i) => (i === idx ? ((x.kind || 'product') === 'service' ? { ...x, service: value } : { ...x, product: value }) : x)))
                           }}
                         >
                           <option value="">{t('common.none')}</option>
-                          {productRows
-                            .filter((p) => !it.category || String(p.category) === String(it.category))
-                            .map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.sku} - {p.name}
-                              </option>
-                            ))}
+                          {(it.kind || 'product') === 'service'
+                            ? serviceRows.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.code} - {s.name}
+                                </option>
+                              ))
+                            : productRows
+                                .filter((p) => !it.category || String(p.category) === String(it.category))
+                                .map((p) => (
+                                  <option key={p.id} value={p.id}>
+                                    {p.sku} - {p.name}
+                                  </option>
+                                ))}
                         </select>
                       </div>
                       <div className={styles.field}>
                         <label className={styles.fieldLabel}>{t('products.unit')}</label>
                         <input
                           className={formStyles.input}
-                          value={productRows.find((p) => String(p.id) === String(it.product))?.unit || t('common.none')}
+                          value={
+                            (it.kind || 'product') === 'service'
+                              ? (serviceRows.find((s) => String(s.id) === String(it.service))?.unit || t('common.none'))
+                              : (productRows.find((p) => String(p.id) === String(it.product))?.unit || t('common.none'))
+                          }
                           readOnly
                         />
                       </div>
@@ -1421,7 +1469,7 @@ export default function IssueNotes() {
                 <button
                   className={`${formStyles.btn} ${formStyles.btnSecondary}`}
                   type="button"
-                  onClick={() => setItems((prev) => [...prev, { category: '', product: '', quantity: '', comment: '' }])}
+                  onClick={() => setItems((prev) => [...prev, { kind: 'product', category: '', product: '', service: '', quantity: '', comment: '' }])}
                 >
                   {t('common.add')}
                 </button>
@@ -1931,9 +1979,8 @@ export default function IssueNotes() {
                     <tbody>
                       {controllerLines.map((ln, idx) => {
                         const it = noteItems.find((x) => x.id === ln.item_id)
-                        const label = it
-                          ? `${it.product_sku ? `${it.product_sku} ` : ''}${it.product_name || ''}`.trim()
-                          : `#${ln.item_id}`
+                        const label = it ? issueLineLabel(it, t) : `#${ln.item_id}`
+                        const serviceLine = isServiceLine(it)
                         const whKey = ln.warehouseId ? String(ln.warehouseId) : ''
                         const zonesForRow = whKey ? placementZonesByWh[whKey] || [] : []
                         const zoneOptionLabel = (z) =>
@@ -1941,6 +1988,9 @@ export default function IssueNotes() {
                         return (
                           <tr key={ln.item_id}>
                             <td className={styles.inspectionProductCell} title={label}>
+                              <span className={`${styles.lineTypeBadge} ${serviceLine ? styles.lineTypeService : styles.lineTypeProduct}`}>
+                                {serviceLine ? 'Услуга' : 'Товар'}
+                              </span>
                               {label || t('common.none')}
                             </td>
                             <td>
@@ -2089,8 +2139,13 @@ export default function IssueNotes() {
                     noteItems.map((it, idx) => (
                       <tr key={it.id || idx}>
                         <td>{it.category_name || it.product_category_name || t('common.none')}</td>
-                        <td>{`${it.product_sku ? `${it.product_sku} - ` : ''}${it.product_name || t('common.none')}`}</td>
-                        <td>{it.product_unit || it.unit || t('common.none')}</td>
+                        <td>
+                          <span className={`${styles.lineTypeBadge} ${isServiceLine(it) ? styles.lineTypeService : styles.lineTypeProduct}`}>
+                            {isServiceLine(it) ? 'Услуга' : 'Товар'}
+                          </span>
+                          {issueLineLabel(it, t)}
+                        </td>
+                        <td>{it.product_unit || it.service_unit || it.unit || t('common.none')}</td>
                         <td>{formatQuantity(it.quantity)}</td>
                         <td>
                           {it.actual_quantity != null && it.actual_quantity !== ''
@@ -2278,82 +2333,90 @@ export default function IssueNotes() {
         )}
       </Modal>
 
-      <div className={tableStyles.pageHead}>
-        <div>
-          <h1 className={tableStyles.h1}>{t('issueNotes.title')}</h1>
-          {isForeman(user) ? <p className={styles.foremanListHint}>{t('issueNotes.foremanListHint')}</p> : null}
-        </div>
-        {canCreate && (
-          <button type="button" className={tableStyles.btnAdd} onClick={() => setFormOpen(true)}>
-            {t('common.add')}
-          </button>
-        )}
-      </div>
       {error ? <div className={formStyles.error}>{error}</div> : null}
 
       {!canView ? (
         <div>{t('issueNotes.noAccess')}</div>
-      ) : loading ? (
-        <div>{t('common.loading')}</div>
       ) : (
-        <div>
-          <TableToolbar
-            search={search}
-            onSearchChange={setSearch}
-            onExport={exportCsv}
-            exportDisabled={!sortedRows.length}
-          >
-            <select className={toolbarStyles.filterSelect} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="">{t('issueNotes.status')}</option>
-              {statusOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-            <select className={toolbarStyles.filterSelect} value={objectFilter} onChange={(e) => setObjectFilter(e.target.value)}>
-              <option value="">{t('issueNotes.object')}</option>
-              {objectFilterOptions.map((o) => (
-                <option key={o.id} value={o.id}>
-                  {o.name}
-                </option>
-              ))}
-            </select>
-            {canSeeShortageHints ? (
-              <select className={toolbarStyles.filterSelect} value={shortageFilter} onChange={(e) => setShortageFilter(e.target.value)}>
-                <option value="">{t('issueNotes.shortageFilterAll')}</option>
-                <option value="with">{t('issueNotes.shortageFilterWith')}</option>
-                <option value="without">{t('issueNotes.shortageFilterWithout')}</option>
-              </select>
-            ) : null}
-            <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
-              <option value="">{t('common.allTime')}</option>
-              <option value="today">{t('common.today')}</option>
-              <option value="week">{t('common.thisWeek')}</option>
-              <option value="month">{t('common.thisMonth')}</option>
-              <option value="custom">{t('common.customRange')}</option>
-            </select>
-            {datePreset === 'custom' ? (
-              <>
-                <input
-                  className={toolbarStyles.filterSelect}
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  aria-label={t('common.dateFrom')}
-                />
-                <input
-                  className={toolbarStyles.filterSelect}
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  aria-label={t('common.dateTo')}
-                />
-              </>
-            ) : null}
-          </TableToolbar>
-          <div className={tableStyles.pageBody}>
-          <div className={tableStyles.tableWrap}>
+        <ListPageDataPanel
+          flushTop
+          title={t('issueNotes.title')}
+          leadExtra={(
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 8 }}>
+              {isForeman(user) ? <p className={styles.foremanListHint} style={{ margin: 0 }}>{t('issueNotes.foremanListHint')}</p> : null}
+              {canCreate ? (
+                <button type="button" className={tableStyles.btnAdd} onClick={() => setFormOpen(true)}>
+                  {t('common.add')}
+                </button>
+              ) : null}
+            </div>
+          )}
+          loading={loading}
+          exportButton={(
+            <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={!sortedRows.length}>
+              {t('common.exportExcel')}
+            </button>
+          )}
+          search={(
+            <ToolbarSearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('common.searchPlaceholder')}
+              aria-label={t('common.searchPlaceholder')}
+            />
+          )}
+          filters={(
+            <>
+              <ToolbarFilterSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">{t('issueNotes.status')}</option>
+                {statusOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </ToolbarFilterSelect>
+              <ToolbarFilterSelect value={objectFilter} onChange={(e) => setObjectFilter(e.target.value)}>
+                <option value="">{t('issueNotes.object')}</option>
+                {objectFilterOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+              </ToolbarFilterSelect>
+              {canSeeShortageHints ? (
+                <ToolbarFilterSelect value={shortageFilter} onChange={(e) => setShortageFilter(e.target.value)}>
+                  <option value="">{t('issueNotes.shortageFilterAll')}</option>
+                  <option value="with">{t('issueNotes.shortageFilterWith')}</option>
+                  <option value="without">{t('issueNotes.shortageFilterWithout')}</option>
+                </ToolbarFilterSelect>
+              ) : null}
+              <ToolbarFilterSelect value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
+                <option value="">{t('common.allTime')}</option>
+                <option value="today">{t('common.today')}</option>
+                <option value="week">{t('common.thisWeek')}</option>
+                <option value="month">{t('common.thisMonth')}</option>
+                <option value="custom">{t('common.customRange')}</option>
+              </ToolbarFilterSelect>
+              {datePreset === 'custom' ? (
+                <>
+                  <ToolbarFilterDateInput
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    aria-label={t('common.dateFrom')}
+                  />
+                  <ToolbarFilterDateInput
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    aria-label={t('common.dateTo')}
+                  />
+                </>
+              ) : null}
+            </>
+          )}
+        >
+          <div className={`${tableStyles.tableWrap} ${panelStyles.dataPanelTableWrap}`}>
           <table className={tableStyles.table}>
             <thead>
               <tr>
@@ -2599,8 +2662,7 @@ export default function IssueNotes() {
               disabled={loading}
             />
           </div>
-          </div>
-        </div>
+        </ListPageDataPanel>
       )}
       {hoverTooltip.visible ? (
         <div

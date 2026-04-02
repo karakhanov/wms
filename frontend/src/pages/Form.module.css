@@ -29,6 +29,16 @@
   gap: 1.1rem;
 }
 
+.formGrid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem 1rem;
+}
+
+.formGridFull {
+  grid-column: 1 / -1;
+}
+
 /* Встроенные формы на странице списка — не на всю ширину экрана */
 .formCompact {
   max-width: min(100%, 26rem);
@@ -95,10 +105,19 @@ html[data-theme='light'] .fkAddBtn {
 }
 
 .row label {
-  font-size: 0.82rem;
-  font-weight: 500;
+  font-size: 0.8rem;
+  font-weight: 600;
   color: var(--muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.015em;
+}
+
+.row label::after {
+  content: '';
+}
+
+.required label::after {
+  content: ' *';
+  color: var(--danger);
 }
 
 .input,
@@ -107,8 +126,9 @@ html[data-theme='light'] .fkAddBtn {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.58rem 0.85rem;
-  font-size: 0.9375rem;
+  min-height: 38px;
+  padding: 0.56rem 0.82rem;
+  font-size: 0.9rem;
   line-height: 1.45;
   border-radius: var(--radius-md);
   color: var(--text);
@@ -116,11 +136,8 @@ html[data-theme='light'] .fkAddBtn {
     border-color 0.15s ease,
     box-shadow 0.15s ease,
     background 0.15s ease;
-  /* тёмная тема: лёгкое «стекло», не сплошная серая плита */
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .select {
@@ -129,7 +146,7 @@ html[data-theme='light'] .fkAddBtn {
 }
 
 .textarea {
-  min-height: 96px;
+  min-height: 98px;
   resize: vertical;
 }
 
@@ -192,10 +209,11 @@ html[data-theme='light'] .textarea:focus {
 }
 
 .btn {
-  padding: 0.48rem 0.92rem;
+  min-height: 36px;
+  padding: 0.46rem 0.9rem;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   line-height: 1.15;
   border: 1px solid transparent;
   cursor: pointer;
@@ -217,22 +235,20 @@ html[data-theme='light'] .textarea:focus {
 }
 
 .btnPrimary {
-  background: rgba(var(--accent-rgb), 0.18);
-  color: var(--accent-bright);
-  border-color: rgba(var(--accent-rgb), 0.42);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  background: rgba(var(--accent-rgb), 0.14);
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.34);
+  box-shadow: none;
 }
 
 .btnPrimary:hover {
-  background: rgba(var(--accent-rgb), 0.24);
-  border-color: rgba(var(--accent-rgb), 0.58);
-  color: #ccfff5;
+  background: rgba(var(--accent-rgb), 0.2);
+  border-color: rgba(var(--accent-rgb), 0.46);
+  color: var(--accent-bright);
 }
 
 .btnSecondary {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--muted);
   border: 1px solid var(--glass-border);
 }
@@ -289,10 +305,36 @@ html[data-theme='light'] .btnDanger:hover {
   border-color: rgba(244, 63, 94, 0.55);
 }
 
+.btnDangerFilled {
+  background: #da3633;
+  color: #fff;
+  border-color: #da3633;
+  box-shadow: none;
+}
+
+.btnDangerFilled:hover {
+  background: #b62318;
+  border-color: #b62318;
+  color: #fff;
+}
+
+html[data-theme='light'] .btnDangerFilled {
+  background: #e11d48;
+  border-color: #e11d48;
+  color: #fff;
+}
+
+html[data-theme='light'] .btnDangerFilled:hover {
+  background: #be123c;
+  border-color: #be123c;
+  color: #fff;
+}
+
 .photoWrap {
   display: flex;
   align-items: flex-start;
   gap: 1.15rem;
+  flex-wrap: wrap;
 }
 
 .photoPreview {
@@ -322,9 +364,34 @@ html[data-theme='light'] .photoPreview {
   font-size: 0.8rem;
 }
 
+.photoWrap input[type='file'].input {
+  min-width: min(100%, 16rem);
+}
+
+.dropZone {
+  width: min(100%, 20rem);
+  min-height: 110px;
+  border-radius: var(--radius-md);
+  border: 1px dashed rgba(var(--accent-rgb), 0.42);
+  background: rgba(var(--accent-rgb), 0.06);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.75rem;
+  font-size: 0.82rem;
+}
+
 html[data-theme='light'] .photoPlaceholder {
   background: #fafcfb;
   border-color: rgba(0, 77, 64, 0.15);
+}
+
+@media (max-width: 900px) {
+  .formGrid2 {
+    grid-template-columns: 1fr;
+  }
 }
 
 .checkRow {

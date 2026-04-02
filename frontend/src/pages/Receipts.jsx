@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { receipts as receiptsApi } from '../api'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
+import EmptyState from '../components/EmptyState'
 import SortHeader from '../components/SortHeader'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { inDateRange } from '../utils/dateFilter'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 import styles from './Table.module.css'
 
 export default function Receipts() {
@@ -27,6 +29,7 @@ export default function Receipts() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState('desc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   useEffect(() => {
     receiptsApi
@@ -74,6 +77,12 @@ export default function Receipts() {
   }, [rows, sortKey, sortDir])
   const count = tableData.count ?? rows.length
   const pages = totalPages(count, pageSize)
+  const rawOnPage = (tableData.results || []).length
+  const listEmptyHint = useMemo(() => {
+    if (sortedRows.length > 0) return ''
+    if (rawOnPage > 0) return t('common.emptyStateFiltered')
+    return t('common.emptyStateHintList')
+  }, [sortedRows.length, rawOnPage, t])
   const toggleSort = (key) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -108,74 +117,89 @@ export default function Receipts() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.h1}>{t('receipts.title')}</h1>
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
-      >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={supplierId}
-          onChange={(e) => {
-            setSupplierId(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('receipts.supplier')}
-        >
-          <option value="">{t('common.all')}</option>
-          {suppliers.map((s) => (
-            <option key={s.id} value={String(s.id)}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
-          <option value="">{t('common.allTime')}</option>
-          <option value="today">{t('common.today')}</option>
-          <option value="week">{t('common.thisWeek')}</option>
-          <option value="month">{t('common.thisMonth')}</option>
-          <option value="custom">{t('common.customRange')}</option>
-        </select>
-        {datePreset === 'custom' ? (
+      <ListPageDataPanel
+        flushTop
+        title={t('receipts.title')}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
           <>
-            <input className={toolbarStyles.filterSelect} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
-            <input className={toolbarStyles.filterSelect} type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+            <ToolbarFilterSelect
+              value={supplierId}
+              onChange={(e) => {
+                setSupplierId(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('receipts.supplier')}
+            >
+              <option value="">{t('common.all')}</option>
+              {suppliers.map((s) => (
+                <option key={s.id} value={String(s.id)}>
+                  {s.name}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
+              <option value="">{t('common.allTime')}</option>
+              <option value="today">{t('common.today')}</option>
+              <option value="week">{t('common.thisWeek')}</option>
+              <option value="month">{t('common.thisMonth')}</option>
+              <option value="custom">{t('common.customRange')}</option>
+            </ToolbarFilterSelect>
+            {datePreset === 'custom' ? (
+              <>
+                <ToolbarFilterDateInput type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
+                <ToolbarFilterDateInput type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+              </>
+            ) : null}
           </>
-        ) : null}
-      </TableToolbar>
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('receipts.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('receipts.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('receipts.employee')} sortKey="employee" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('receipts.supplier')} sortKey="supplier" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.id}</td>
-                    <td>{r.created_at?.slice(0, 10)}</td>
-                    <td>{r.created_by_username || t('common.none')}</td>
-                    <td>{r.supplier_name || t('common.none')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
+        )}
+      >
+        <div className={styles.listTableShell}>
+          {sortedRows.length === 0 ? (
+            <EmptyState hint={listEmptyHint} compact />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'id', header: <SortHeader className={styles.sortableHeader} label={t('receipts.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'date', header: <SortHeader className={styles.sortableHeader} label={t('receipts.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'employee', header: <SortHeader className={styles.sortableHeader} label={t('receipts.employee')} sortKey="employee" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'supplier', header: <SortHeader className={styles.sortableHeader} label={t('receipts.supplier')} sortKey="supplier" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+              ]}
+              rows={sortedRows}
+              rowKey="id"
+              selection={{
+                selectedIds,
+                onToggleAll: (checked) => setSelectedIds(checked ? new Set(sortedRows.map((r) => r.id)) : new Set()),
+                onToggleOne: (id, checked) => {
+                  const next = new Set(selectedIds)
+                  if (checked) next.add(id)
+                  else next.delete(id)
+                  setSelectedIds(next)
+                },
+              }}
+              renderCell={(r, col) => {
+                if (col.key === 'id') return r.id
+                if (col.key === 'date') return r.created_at?.slice(0, 10)
+                if (col.key === 'employee') return r.created_by_username || t('common.none')
+                if (col.key === 'supplier') return r.supplier_name || t('common.none')
+                return null
+              }}
               page={page}
               pageCount={pages}
               total={count}
@@ -183,10 +207,15 @@ export default function Receipts() {
               pageSize={pageSize}
               onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
               disabled={loading}
+              bulkActions={
+                <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+                  {t('common.exportExcel')}
+                </button>
+              }
             />
-          </div>
+          )}
         </div>
-      )}
+      </ListPageDataPanel>
     </div>
   )
 }

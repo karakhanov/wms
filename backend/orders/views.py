@@ -55,8 +55,11 @@ from .serializers import (
 
 
 def _deduct_stock_for_issue_note(note):
-    for item in note.items.select_related("product", "request_item", "cell"):
+    for item in note.items.select_related("product", "service", "request_item", "cell"):
         quantity = item.actual_quantity if item.actual_quantity is not None else item.quantity
+        if item.service_id:
+            # Услуги не списываются со склада.
+            continue
         product = item.product
         selected_cell = item.cell
         if selected_cell:
@@ -293,7 +296,7 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
     ).prefetch_related(
         Prefetch(
             "items",
-            queryset=IssueNoteItem.objects.select_related("product__category", "cell"),
+            queryset=IssueNoteItem.objects.select_related("product__category", "service", "cell"),
         ),
         "inspection_invited_users",
     )
@@ -590,12 +593,15 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
                         raise ValidationError(
                             "В выбранной зоне нет активных ячеек для оприходования. Добавьте ячейку в зоне или выберите другую зону."
                         )
-                bal, _ = StockBalance.objects.get_or_create(
-                    product=item.product, cell=cell, defaults={"quantity": 0}
-                )
-                bal.quantity += qty
-                bal.save(update_fields=["quantity", "updated_at"])
-                item.cell = cell
+                if item.product_id:
+                    bal, _ = StockBalance.objects.get_or_create(
+                        product=item.product, cell=cell, defaults={"quantity": 0}
+                    )
+                    bal.quantity += qty
+                    bal.save(update_fields=["quantity", "updated_at"])
+                    item.cell = cell
+                else:
+                    item.cell = None
             else:
                 item.cell = None
             item.save(
@@ -630,11 +636,15 @@ class IssueNoteViewSet(SetAuditUserMixin, viewsets.ModelViewSet):
             if quantity <= 0:
                 raise ValidationError("Количество в накладной должно быть больше нуля.")
             request_item = raw_item.get("request_item")
-            product = raw_item["product"]
+            product = raw_item.get("product")
+            service = raw_item.get("service")
             if request_item and request_obj and request_item.request_id != request_obj.id:
                 raise ValidationError("Строка накладной не относится к выбранной заявке.")
-            if request_item and product.id != request_item.product_id:
-                raise ValidationError("Товар не совпадает со строкой заявки.")
+            if request_item:
+                if product and request_item.product_id != product.id:
+                    raise ValidationError("Товар не совпадает со строкой заявки.")
+                if service and request_item.service_id != service.id:
+                    raise ValidationError("Услуга не совпадает со строкой заявки.")
             IssueNoteItem.objects.create(issue_note=issued_note, **raw_item)
         notify_issue_note_submitted(issued_note, actor=self.request.user)
 

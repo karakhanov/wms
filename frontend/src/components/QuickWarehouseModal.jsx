@@ -50,6 +50,7 @@ export default function QuickWarehouseModal({ open, onClose, onCreated, stackDep
       title={t('warehouse.newWarehouse')}
       onClose={() => !loading && onClose()}
       stacked={outerStacked === false ? false : outerStacked}
+      drawer
     >
       <form onSubmit={handleSubmit} className={`${formStyles.form} ${formStyles.formModal}`}>
         {error && <div className={formStyles.error}>{error}</div>}

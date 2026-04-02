@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { getPaginationPageNumbers } from '../utils/paginationPages'
 import styles from './TableToolbar.module.css'
+import panelStyles from '../pages/DataPanelLayout.module.css'
 
 /**
  * @param {{
@@ -28,6 +29,7 @@ export default function PaginationBar({
   const canPrev = page > 1
   const canNext = page < pageCount
   const pageNumbers = pageCount > 1 ? getPaginationPageNumbers(page, pageCount) : []
+  const showPager = total > 0
 
   return (
     <div className={styles.pagination}>
@@ -37,7 +39,7 @@ export default function PaginationBar({
       </span>
       {onPageSizeChange ? (
         <select
-          className={styles.filterSelect}
+          className={`${panelStyles.toolbarControl} ${panelStyles.toolbarPaginationSelect}`}
           value={String(pageSize || pageSizeOptions[0])}
           onChange={(e) => onPageSizeChange(Number(e.target.value))}
           disabled={disabled}
@@ -50,7 +52,7 @@ export default function PaginationBar({
           ))}
         </select>
       ) : null}
-      {pageCount > 1 && (
+      {showPager ? (
         <div className={styles.paginationPages}>
           <button
             type="button"
@@ -59,26 +61,34 @@ export default function PaginationBar({
             onClick={() => onPageChange(page - 1)}
             aria-label={t('common.prevPage')}
           >
-            ‹
+            <span className={styles.pageNavLabel} aria-hidden>
+              ‹ {t('common.back')}
+            </span>
           </button>
-          {pageNumbers.map((item, idx) =>
-            item === 'ellipsis' ? (
-              <span key={`e-${idx}`} className={styles.pageEllipsis} aria-hidden>
-                …
-              </span>
-            ) : (
-              <button
-                key={item}
-                type="button"
-                className={`${styles.pageBtn} ${styles.pageNum} ${item === page ? styles.pageNumActive : ''}`}
-                disabled={disabled}
-                onClick={() => onPageChange(item)}
-                aria-label={t('common.pageNumber', { page: item })}
-                aria-current={item === page ? 'page' : undefined}
-              >
-                {item}
-              </button>
+          {pageCount > 1 ? (
+            pageNumbers.map((item, idx) =>
+              item === 'ellipsis' ? (
+                <span key={`e-${idx}`} className={styles.pageEllipsis} aria-hidden>
+                  …
+                </span>
+              ) : (
+                <button
+                  key={item}
+                  type="button"
+                  className={`${styles.pageBtn} ${styles.pageNum} ${item === page ? styles.pageNumActive : ''}`}
+                  disabled={disabled}
+                  onClick={() => onPageChange(item)}
+                  aria-label={t('common.pageNumber', { page: item })}
+                  aria-current={item === page ? 'page' : undefined}
+                >
+                  {item}
+                </button>
+              )
             )
+          ) : (
+            <span className={styles.pageSingle} aria-current="page">
+              1
+            </span>
           )}
           <button
             type="button"
@@ -87,10 +97,12 @@ export default function PaginationBar({
             onClick={() => onPageChange(page + 1)}
             aria-label={t('common.nextPage')}
           >
-            ›
+            <span className={styles.pageNavLabel} aria-hidden>
+              {t('common.forward')} ›
+            </span>
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

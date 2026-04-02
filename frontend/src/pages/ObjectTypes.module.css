@@ -1,0 +1,47 @@
+.objectNameBtn {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(var(--accent-rgb), 0.24);
+  background: rgba(var(--accent-rgb), 0.08);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.34rem 0.58rem;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  min-height: 34px;
+}
+
+.objectNameBtn:hover {
+  border-color: rgba(var(--accent-rgb), 0.38);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+
+.typePhotoFrame {
+  width: 46px;
+  height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 4px;
+  cursor: pointer;
+}
+
+.typePhoto {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.actionsRow {
+  white-space: nowrap;
+}
+
+.actionsRow :global(button) {
+  min-height: 34px;
+  min-width: 82px;
+}

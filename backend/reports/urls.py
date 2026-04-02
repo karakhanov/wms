@@ -7,4 +7,6 @@ urlpatterns = [
     path("shortage/", views.ReportShortage.as_view()),
     path("popular/", views.ReportPopular.as_view()),
     path("object-consumption/", views.ReportObjectConsumption.as_view()),
+    path("object-limits/", views.ReportObjectLimitsSummary.as_view()),
+    path("object-limits/<int:object_id>/", views.ReportObjectLimitsDetail.as_view()),
 ]

@@ -1,0 +1,17 @@
+---
+description: Format numeric inputs and amount displays consistently in frontend
+globs: frontend/src/**/*.{js,jsx,ts,tsx}
+alwaysApply: false
+---
+
+# Frontend Number Formatting
+
+- For money and quantity inputs, use text input with `inputMode="decimal"` instead of `type="number"` for better UX.
+- While typing, keep a normalized raw value in state (digits + decimal point), and render it with thousand separators.
+- Send numeric values to API without spaces (for empty value send `null` when field is optional).
+- In tables/cards, always format numeric amounts with thousand separators.
+- Reuse shared helpers from `frontend/src/utils/numberFormat.js`:
+  - `sanitizeNumberInput()`
+  - `formatNumberInput()`
+  - `formatNumberCell()`
+  - `numberInputToApi()`

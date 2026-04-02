@@ -1,9 +1,31 @@
-export default function SortHeader({ label, sortKey, activeKey, sortDir, onToggle, className }) {
-  const suffix = activeKey === sortKey ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''
+/** @param {{ showInactiveHint?: boolean }} props — нейтральный ⇅ у неактивных колонок */
+export default function SortHeader({
+  label,
+  sortKey,
+  activeKey,
+  sortDir,
+  onToggle,
+  className,
+  showInactiveHint = false,
+}) {
+  const active = activeKey === sortKey
+  const arrow = active ? (sortDir === 'asc' ? '↑' : '↓') : showInactiveHint ? '⇅' : ''
   return (
-    <th className={className} onClick={() => onToggle(sortKey)}>
+    <button
+      type="button"
+      className={className}
+      onClick={() => onToggle(sortKey)}
+      aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
       {label}
-      {suffix}
-    </th>
+      {arrow ? (
+        <>
+          {' '}
+          <span aria-hidden>
+            {arrow}
+          </span>
+        </>
+      ) : null}
+    </button>
   )
 }

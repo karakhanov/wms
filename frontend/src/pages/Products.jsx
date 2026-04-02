@@ -1,28 +1,38 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { products as productsApi } from '../api'
 import { useAuth } from '../auth'
 import { canManageProducts } from '../permissions'
 import ProductEditorModal from '../components/ProductEditorModal'
-import TableToolbar from '../components/TableToolbar'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import RowActionsMenu from '../components/RowActionsMenu'
+import Button from '../components/Button'
+import ListPageDataPanel from '../components/ListPageDataPanel'
+import EmptyState from '../components/EmptyState'
 import SortHeader from '../components/SortHeader'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect } from '../components/ToolbarControls'
 import styles from './Table.module.css'
+import pStyles from './Products.module.css'
+import { IconNav } from '../ui/Icons'
 
-function photoUrl(photo) {
-  if (!photo) return null
-  if (photo.startsWith('http')) return photo
-  return `/${photo}`.replace(/^\/+/, '/')
+function photoUrl(photo, photoUrlField) {
+  const v = photoUrlField || photo
+  if (!v) return null
+  if (v.startsWith('http')) return v
+  return `/${v}`.replace(/^\/+/, '/')
 }
 
 export default function Products() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [list, setList] = useState({ results: [], count: 0 })
   const [loading, setLoading] = useState(true)
   const [editor, setEditor] = useState({ open: false, productId: null })
@@ -35,6 +45,7 @@ export default function Products() {
   const [catOptions, setCatOptions] = useState([])
   const [sortKey, setSortKey] = useState('sku')
   const [sortDir, setSortDir] = useState('asc')
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const canManage = canManageProducts(user)
 
   const load = useCallback(() => {
@@ -64,10 +75,7 @@ export default function Products() {
       .catch(() => setCatOptions([]))
   }, [])
 
-  const handleDelete = (id, name) => {
-    if (!window.confirm(t('common.confirmDelete') + '\n' + name)) return
-    productsApi.delete(id).then(() => load()).catch((e) => alert(e.response?.data?.detail || 'Error'))
-  }
+  const requestDelete = (id, name) => setDeleteTarget({ id, name })
 
   const openCreate = () => setEditor({ open: true, productId: null })
   const openEdit = (id) => setEditor({ open: true, productId: id })
@@ -96,6 +104,13 @@ export default function Products() {
   }, [rows, sortKey, sortDir])
   const count = list.count ?? rows.length
   const pages = totalPages(count, pageSize)
+  const listEmptyHint = useMemo(() => {
+    if (sortedRows.length > 0) return ''
+    const hasFilters = debouncedSearch.trim() || category || activeFilter !== ''
+    if (hasFilters) return t('common.emptyStateFiltered')
+    if (canManage) return t('common.emptyStateHintWithAdd', { addLabel: t('common.add') })
+    return t('common.emptyStateHintList')
+  }, [sortedRows.length, debouncedSearch, category, activeFilter, canManage, t])
   const toggleSort = (key) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -144,130 +159,149 @@ export default function Products() {
   return (
     <div className={styles.page}>
       {canManage && (
-        <ProductEditorModal
-          open={editor.open}
-          productId={editor.productId}
-          onClose={closeEditor}
-          onSaved={load}
-        />
+        <>
+          <ProductEditorModal
+            open={editor.open}
+            productId={editor.productId}
+            onClose={closeEditor}
+            onSaved={load}
+          />
+          <ConfirmDeleteModal
+            open={!!deleteTarget}
+            itemName={deleteTarget?.name}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={() => {
+              if (!deleteTarget) return Promise.resolve()
+              return productsApi.delete(deleteTarget.id).then(() => load())
+            }}
+          />
+        </>
       )}
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('products.title')}</h1>
-        </div>
-        {canManage && (
-          <button type="button" className={styles.btnAdd} onClick={openCreate}>
+      <ListPageDataPanel
+        flushTop
+        title={t('products.title')}
+        leadExtra={canManage ? (
+          <Button variant="primary" size="md" onClick={openCreate}>
             {t('common.add')}
-          </button>
+          </Button>
+        ) : null}
+        loading={loading}
+        exportButton={(
+          <Button variant="outline" size="sm" onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </Button>
         )}
-      </div>
-
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            onClear={() => {
+              setSearch('')
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
+          <>
+            <ToolbarFilterSelect
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('products.categoryFilter')}
+            >
+              <option value="">{t('common.all')} — {t('products.category')}</option>
+              {catOptions.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.name}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect
+              value={activeFilter}
+              onChange={(e) => {
+                setActiveFilter(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('products.active')}
+            >
+              <option value="">{t('common.all')}</option>
+              <option value="true">{t('common.activeOnly')}</option>
+              <option value="false">{t('common.inactiveOnly')}</option>
+            </ToolbarFilterSelect>
+          </>
+        )}
       >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('products.categoryFilter')}
-        >
-          <option value="">{t('common.all')} — {t('products.category')}</option>
-          {catOptions.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className={toolbarStyles.filterSelect}
-          value={activeFilter}
-          onChange={(e) => {
-            setActiveFilter(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('products.active')}
-        >
-          <option value="">{t('common.all')}</option>
-          <option value="true">{t('common.activeOnly')}</option>
-          <option value="false">{t('common.inactiveOnly')}</option>
-        </select>
-      </TableToolbar>
-
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>{t('common.photo')}</th>
-                  <SortHeader className={styles.sortableHeader} label={t('products.sku')} sortKey="sku" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('products.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('products.barcode')} sortKey="barcode" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('products.category')} sortKey="category" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('products.unit')} sortKey="unit" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('products.amount')} sortKey="amount" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  {canManage && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      {p.photo ? (
-                        <img src={photoUrl(p.photo)} alt="" className={styles.thumb} />
-                      ) : (
-                        <span className={styles.thumbPlaceholder}>—</span>
-                      )}
-                    </td>
-                    <td>{p.sku}</td>
-                    <td>{p.name}</td>
-                    <td>{p.barcode || t('common.none')}</td>
-                    <td>{p.category_name || t('common.none')}</td>
-                    <td>{p.unit}</td>
-                    <td>{p.amount}</td>
-                    {canManage && (
-                      <td className={styles.actions}>
-                        <button type="button" className={styles.btnSm} onClick={() => openEdit(p.id)}>
-                          {t('common.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.btnSm} ${styles.btnDanger}`}
-                          onClick={() => handleDelete(p.id, p.name)}
-                        >
-                          {t('common.delete')}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
+        <div className={styles.listTableShell}>
+          {sortedRows.length === 0 ? (
+            <EmptyState
+              hint={listEmptyHint}
+              compact
+              actionLabel={canManage ? t('common.add') : undefined}
+              onAction={canManage ? openCreate : undefined}
+            />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'photo', header: t('common.photo') },
+                { key: 'sku', header: <SortHeader className={styles.sortableHeader} label={t('products.sku')} sortKey="sku" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'name', header: <SortHeader className={styles.sortableHeader} label={t('products.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'barcode', header: <SortHeader className={styles.sortableHeader} label={t('products.barcode')} sortKey="barcode" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'category', header: <SortHeader className={styles.sortableHeader} label={t('products.category')} sortKey="category" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'unit', header: <SortHeader className={styles.sortableHeader} label={t('products.unit')} sortKey="unit" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                { key: 'amount', header: <SortHeader className={styles.sortableHeader} label={t('products.amount')} sortKey="amount" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+                ...(canManage ? [{ key: 'actions', header: t('common.actions') }] : []),
+              ]}
+              rows={sortedRows}
+              rowKey="id"
+              renderCell={(p, col) => {
+                if (col.key === 'photo') {
+                  return photoUrl(p.photo, p.photo_url) ? (
+                    <span className={pStyles.photoFrame}>
+                      <img src={photoUrl(p.photo, p.photo_url)} alt={p.name} className={pStyles.photo} />
+                    </span>
+                  ) : (
+                    <span className={pStyles.photoFrame} aria-hidden>{p.name.charAt(0).toUpperCase()}</span>
+                  )
+                }
+                if (col.key === 'sku') return <span className={pStyles.sku}>{p.sku}</span>
+                if (col.key === 'name') return <span className={pStyles.name} onClick={() => navigate(`/products/${p.id}`)}>{p.name}</span>
+                if (col.key === 'barcode') return p.barcode || t('common.none')
+                if (col.key === 'category') return p.category_name || t('common.none')
+                if (col.key === 'unit') return p.unit
+                if (col.key === 'amount') return <span className={pStyles.amount}>{p.amount}</span>
+                if (col.key === 'actions' && canManage) {
+                  return (
+                    <RowActionsMenu
+                      onEdit={() => openEdit(p.id)}
+                      onDelete={() => requestDelete(p.id, p.name)}
+                      itemName={p.name}
+                    />
+                  )
+                }
+                return null
+              }}
+              emptyText={t('common.emptyList')}
               page={page}
               pageCount={pages}
               total={count}
               onPageChange={setPage}
               pageSize={pageSize}
-              onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+              onPageSizeChange={(size) => {
+                setPageSize(size)
+                setPage(1)
+              }}
               disabled={loading}
             />
-          </div>
+          )}
         </div>
-      )}
+      </ListPageDataPanel>
     </div>
   )
 }

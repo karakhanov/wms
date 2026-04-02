@@ -4,18 +4,19 @@ import { useTranslation } from 'react-i18next'
 import { notifications as notificationsApi } from '../api'
 import { useAuth } from '../auth'
 import { canViewNotifications } from '../permissions'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
 import StatusBadge from '../components/StatusBadge'
+import DataTable from '../components/DataTable'
 import { downloadCsv } from '../utils/csvExport'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
-import PaginationBar from '../components/PaginationBar'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { inDateRange } from '../utils/dateFilter'
 import styles from './Table.module.css'
 import formStyles from './Form.module.css'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 
 export default function Notifications() {
   const navigate = useNavigate()
@@ -31,6 +32,7 @@ export default function Notifications() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState('created_at')
   const [sortDir, setSortDir] = useState('desc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const debouncedSearch = useDebouncedValue(search, 300)
 
   const load = useCallback(async () => {
@@ -164,105 +166,126 @@ export default function Notifications() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('notifications.title')}</h1>
-        </div>
-        <button type="button" className={`${formStyles.btn} ${formStyles.btnSecondary}`} onClick={markAllRead} disabled={loading}>
-          {t('notifications.markAllRead')}
-        </button>
-      </div>
-
-      <TableToolbar search={search} onSearchChange={setSearch} onExport={exportCsv} exportDisabled={!sortedRows.length}>
-        <select className={toolbarStyles.filterSelect} value={readFilter} onChange={(e) => setReadFilter(e.target.value)}>
-          <option value="">{t('common.all')}</option>
-          <option value="unread">{t('notifications.unread')}</option>
-          <option value="read">{t('notifications.read')}</option>
-        </select>
-        <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
-          <option value="">{t('common.allTime')}</option>
-          <option value="today">{t('common.today')}</option>
-          <option value="week">{t('common.thisWeek')}</option>
-          <option value="month">{t('common.thisMonth')}</option>
-          <option value="custom">{t('common.customRange')}</option>
-        </select>
-        {datePreset === 'custom' ? (
+      <ListPageDataPanel
+        flushTop
+        title={t('notifications.title')}
+        leadExtra={(
+          <button type="button" className={`${formStyles.btn} ${formStyles.btnSecondary}`} onClick={markAllRead} disabled={loading}>
+            {t('notifications.markAllRead')}
+          </button>
+        )}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={!sortedRows.length}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
           <>
-            <input
-              className={toolbarStyles.filterSelect}
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              aria-label={t('common.dateFrom')}
-            />
-            <input
-              className={toolbarStyles.filterSelect}
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              aria-label={t('common.dateTo')}
-            />
+            <ToolbarFilterSelect value={readFilter} onChange={(e) => setReadFilter(e.target.value)}>
+              <option value="">{t('common.all')}</option>
+              <option value="unread">{t('notifications.unread')}</option>
+              <option value="read">{t('notifications.read')}</option>
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
+              <option value="">{t('common.allTime')}</option>
+              <option value="today">{t('common.today')}</option>
+              <option value="week">{t('common.thisWeek')}</option>
+              <option value="month">{t('common.thisMonth')}</option>
+              <option value="custom">{t('common.customRange')}</option>
+            </ToolbarFilterSelect>
+            {datePreset === 'custom' ? (
+              <>
+                <ToolbarFilterDateInput
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  aria-label={t('common.dateFrom')}
+                />
+                <ToolbarFilterDateInput
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  aria-label={t('common.dateTo')}
+                />
+              </>
+            ) : null}
           </>
-        ) : null}
-      </TableToolbar>
-
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('notifications.type')} sortKey="type" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('notifications.title')} sortKey="title" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <th>{t('notifications.message')}</th>
-                  <SortHeader className={styles.sortableHeader} label={t('notifications.status')} sortKey="is_read" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('notifications.date')} sortKey="created_at" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <th>{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedRows.map((n) => (
-                  <tr key={n.id}>
-                    <td>{typeLabel(n.type)}</td>
-                    <td>{titleLabel(n)}</td>
-                    <td>{messageLabel(n)}</td>
-                    <td>
-                      <StatusBadge value={n.is_read ? t('notifications.read') : t('notifications.unread')} toneValue={n.is_read ? 'read' : 'unread'} />
-                    </td>
-                    <td>{n.created_at?.slice(0, 10)}</td>
-                    <td>
-                      {!n.is_read ? (
-                        <button type="button" className={styles.btnSm} onClick={() => markRead(n.id)}>
-                          {t('notifications.markRead')}
-                        </button>
-                      ) : null}{' '}
-                      <button type="button" className={styles.btnSm} onClick={() => openEntity(n)}>
-                        {t('notifications.open')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
-              page={page}
-              pageCount={pages}
-              total={sortedRows.length}
-              onPageChange={setPage}
-              pageSize={pageSize}
-              onPageSizeChange={(size) => {
-                setPageSize(size)
-                setPage(1)
-              }}
-              disabled={loading}
-            />
-          </div>
-        </div>
-      )}
+        )}
+      >
+        <DataTable
+          columns={[
+            { key: 'type', header: <SortHeader className={styles.sortableHeader} label={t('notifications.type')} sortKey="type" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'title', header: <SortHeader className={styles.sortableHeader} label={t('notifications.title')} sortKey="title" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'message', header: t('notifications.message') },
+            { key: 'status', header: <SortHeader className={styles.sortableHeader} label={t('notifications.status')} sortKey="is_read" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'date', header: <SortHeader className={styles.sortableHeader} label={t('notifications.date')} sortKey="created_at" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'actions', header: t('common.actions') },
+          ]}
+          rows={pagedRows}
+          rowKey="id"
+          selection={{
+            selectedIds,
+            onToggleAll: (checked) => setSelectedIds(checked ? new Set(pagedRows.map((n) => n.id)) : new Set()),
+            onToggleOne: (id, checked) => {
+              const next = new Set(selectedIds)
+              if (checked) next.add(id)
+              else next.delete(id)
+              setSelectedIds(next)
+            },
+          }}
+          renderCell={(n, col) => {
+            if (col.key === 'type') return typeLabel(n.type)
+            if (col.key === 'title') return titleLabel(n)
+            if (col.key === 'message') return messageLabel(n)
+            if (col.key === 'status') return <StatusBadge value={n.is_read ? t('notifications.read') : t('notifications.unread')} toneValue={n.is_read ? 'read' : 'unread'} />
+            if (col.key === 'date') return n.created_at?.slice(0, 10)
+            if (col.key === 'actions') {
+              return (
+                <>
+                  {!n.is_read ? (
+                    <button type="button" className={styles.btnSm} onClick={() => markRead(n.id)}>
+                      {t('notifications.markRead')}
+                    </button>
+                  ) : null}{' '}
+                  <button type="button" className={styles.btnSm} onClick={() => openEntity(n)}>
+                    {t('notifications.open')}
+                  </button>
+                </>
+              )
+            }
+            return null
+          }}
+          page={page}
+          pageCount={pages}
+          total={sortedRows.length}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => {
+            setPageSize(size)
+            setPage(1)
+          }}
+          disabled={loading}
+          bulkActions={
+            <>
+              <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={!sortedRows.length}>
+                {t('common.exportExcel')}
+              </button>
+              <button type="button" className={styles.btnSm} onClick={markAllRead} disabled={loading}>
+                {t('notifications.markAllRead')}
+              </button>
+            </>
+          }
+        />
+      </ListPageDataPanel>
     </div>
   )
 }

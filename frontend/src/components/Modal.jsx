@@ -13,10 +13,21 @@ function stackClassName(stacked, styles) {
 }
 
 /**
- * @param {{ open: boolean, title: string, children: React.ReactNode, onClose: () => void, wide?: boolean, xwide?: boolean, stacked?: boolean | number }} props
+ * @param {{ 
+ *   open: boolean, 
+ *   title: string, 
+ *   children: React.ReactNode, 
+ *   onClose: () => void, 
+ *   footer?: React.ReactNode,
+ *   wide?: boolean, 
+ *   xwide?: boolean, 
+ *   stacked?: boolean | number,
+ *   size?: 'sm' | 'md' | 'lg',
+ *   drawer?: boolean
+ * }} props
  * stacked: true|1 — первый уровень поверх основной модалки; 2 и 3 — для глубокой вложенности (склад→зона→…).
  */
-export default function Modal({ open, title, children, onClose, wide = false, xwide = false, stacked = false }) {
+export default function Modal({ open, title, children, onClose, footer, wide = false, xwide = false, stacked = false, size = 'md', drawer = false }) {
   const { t } = useTranslation()
   const titleId = useId()
 
@@ -36,6 +47,8 @@ export default function Modal({ open, title, children, onClose, wide = false, xw
 
   if (!open) return null
 
+  const sizeClass = size === 'sm' ? styles.panelSm : size === 'lg' ? styles.panelLg : ''
+
   return createPortal(
     <div
       className={`${styles.overlay} ${stackClassName(stacked, styles)}`.trim()}
@@ -45,7 +58,7 @@ export default function Modal({ open, title, children, onClose, wide = false, xw
       }}
     >
       <div
-        className={`${styles.panel} ${wide ? styles.panelWide : ''} ${xwide ? styles.panelXWide : ''}`.trim()}
+        className={`${styles.panel} ${wide ? styles.panelWide : ''} ${xwide ? styles.panelXWide : ''} ${sizeClass} ${drawer ? styles.panelDrawer : ''}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -60,6 +73,7 @@ export default function Modal({ open, title, children, onClose, wide = false, xw
           </button>
         </div>
         <div className={styles.body}>{children}</div>
+        {footer && <div className={styles.footer}>{footer}</div>}
       </div>
     </div>,
     document.body

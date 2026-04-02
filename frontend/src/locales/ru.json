@@ -7,7 +7,27 @@
     "version": "Версия {{version}}",
     "sidebarHint": "Корпоративный учёт склада Bashkent",
     "readyPickupTitle": "Накладные готовы к выдаче: {{count}}",
-    "readyPickupNavTitle": "Готовы к выдаче: {{count}} накл."
+    "readyPickupNavTitle": "Готовы к выдаче: {{count}} накл.",
+    "breadcrumb": {
+      "details": "Карточка",
+      "unknown": "Раздел",
+      "aria": "Навигация по разделам"
+    },
+    "notificationsEmpty": "Нет непрочитанных уведомлений",
+    "notificationsViewAll": "Все уведомления",
+    "notificationsLoadError": "Не удалось загрузить уведомления",
+    "profileSettings": "Настройки профиля",
+    "userMenu": "Меню пользователя",
+    "notificationsMenu": "Уведомления",
+    "navGroups": {
+      "group1": "Дашборд",
+      "group2": "Справочники",
+      "group3": "Объекты и лимиты",
+      "group4": "Документы",
+      "group5": "Складские операции",
+      "group6": "Отчёты",
+      "group7": "Администрирование"
+    }
   },
   "nav": {
     "dashboard": "Дашборд",
@@ -15,6 +35,7 @@
     "categories": "Категории",
     "warehouse": "Склад",
     "objects": "Объекты",
+    "services": "Услуги",
     "suppliers": "Поставщики",
     "receipts": "Приём",
     "orders": "Отгрузка",
@@ -27,6 +48,49 @@
     "issueNotes": "Накладные",
     "notifications": "Уведомления",
     "history": "История"
+    ,"objectLimits": "Лимиты объектов"
+    ,"objectTypes": "Типы объектов"
+    ,"about": "О системе",
+    "profilePage": "Профиль"
+  },
+  "profile": {
+    "lead": "Краткая информация об учётной записи.",
+    "displayName": "Отображаемое имя",
+    "contactAdmin": "Чтобы изменить логин, роль или пароль, обратитесь к администратору."
+  },
+  "about": {
+    "title": "О системе",
+    "intro": "Корпоративный учёт склада Bashkent WMS: учёт товаров, документов, объектов и лимитов."
+  },
+  "objectDetails": {
+    "notSet": "Не задан",
+    "uploadPhoto": "Загрузить фото",
+    "backToObjects": "Назад к объектам",
+    "noPhotoYet": "Фото ещё не загружено",
+    "fieldCode": "Код",
+    "fieldType": "Тип",
+    "fieldAddress": "Адрес",
+    "fieldLimitAmount": "Лимит суммы",
+    "fieldLimitQty": "Лимит количества",
+    "tabOverview": "Сводка",
+    "tabLimits": "Лимиты",
+    "tabProducts": "По товарам",
+    "tabServices": "По услугам",
+    "tabUtilization": "Нагрузка",
+    "tabsAria": "Разделы карточки объекта",
+    "addLimit": "Добавить лимит",
+    "addLimitNeedType": "Сначала назначьте тип объекта, чтобы редактировать лимиты типа",
+    "limitsEmptyTitle": "Лимиты не добавлены",
+    "limitsEmptyHint": "Лимиты задаются в карточке типа объекта. Откройте редактор типа и добавьте позиции с количественными лимитами.",
+    "limitsFilteredEmpty": "В этом разделе нет позиций",
+    "colKind": "Тип позиции",
+    "colPosition": "Позиция",
+    "colLimit": "Лимит",
+    "colUsed": "Использовано",
+    "colRemaining": "Остаток",
+    "colPercent": "Загрузка",
+    "kindProduct": "Товар",
+    "kindService": "Услуга"
   },
   "login": {
     "title": "Bashkent WMS",
@@ -55,7 +119,11 @@
     "send": "Отправить",
     "cancel": "Отмена",
     "back": "Назад",
+    "forward": "Далее",
     "confirmDelete": "Удалить запись?",
+    "confirmDeleteTitle": "Подтвердите удаление",
+    "confirmDeleteBody": "Вы уверены, что хотите удалить «{{name}}»? Это действие нельзя отменить.",
+    "recordFallback": "эту запись",
     "photo": "Фото",
     "closeDialog": "Закрыть",
     "search": "Поиск",
@@ -84,7 +152,12 @@
     "rowsPerPage": "Строк на странице",
     "toggleSidebar": "Свернуть/развернуть меню",
     "menu": "Меню",
-    "pageNumber": "Страница {{page}}"
+    "pageNumber": "Страница {{page}}",
+    "noData": "Нет данных",
+    "emptyStateHintWithAdd": "Добавьте первую запись, нажав кнопку «+ {{addLabel}}» вверху страницы.",
+    "emptyStateHintList": "Записей пока нет. Создайте документ в процессе работы или измените фильтры.",
+    "emptyStateFiltered": "Нет записей, подходящих под выбранные фильтры.",
+    "reportsEmptyHint": "Нет строк для отчёта при текущих данных или поиске."
   },
   "dashboard": {
     "title": "Дашборд",
@@ -109,6 +182,12 @@
     "kpiTransfers": "Перемещения",
     "kpiInventory": "Инвентаризации откр. / всего",
     "kpiShortage": "Ниже минимума",
+    "kpiReceiptsPeriod": "Приёмки за период",
+    "kpiOrdersPeriod": "Отгрузки за период",
+    "kpiActiveOrders": "Активные заказы",
+    "kpiTransfersPeriod": "Перемещения",
+    "kpiOpenInventories": "Открытые инвентаризации",
+    "kpiBelowMin": "Позиции ниже минимума",
     "recentReceipts": "Последние приёмки",
     "recentOrders": "Последние заказы",
     "colDoc": "Документ",
@@ -125,7 +204,26 @@
     "shortageEmpty": "Все позиции в норме",
     "openReports": "Отчёты",
     "modulesTitle": "Разделы",
-    "loadError": "Часть данных не загрузилась — проверьте доступ к API"
+    "popularEmpty": "Пока нет отгрузок",
+    "recentNotifications": "Уведомления",
+    "notificationsEmpty": "Нет уведомлений",
+    "loadError": "Часть данных не загрузилась — проверьте доступ к API",
+    "receiptsVsOrders": "Приёмки vs Отгрузки по дням",
+    "receipts": "Приёмки",
+    "orders": "Отгрузки",
+    "topProducts": "Топ-10 товаров по отгрузкам",
+    "byQuantity": "По количеству",
+    "bySum": "По сумме",
+    "noShipments": "Нет отгрузок за период",
+    "stockByCategory": "Структура остатков по категориям",
+    "criticalStock": "Критические остатки (ниже минимума)",
+    "showAll": "Показать все",
+    "allPositionsOk": "✓ Все позиции в норме",
+    "alert": "Критично",
+    "operational": "Операции",
+    "shortageDanger": "Нехватка",
+    "shortageOk": "В норме",
+    "summarySub": "По данным за выбранный период"
   },
   "products": {
     "title": "Товары",
@@ -211,7 +309,10 @@
     "updatedAt": "Обновлено",
     "emptyList": "Остатков в системе пока нет.",
     "emptyFiltered": "Нет строк по поиску или выбранному складу.",
-    "loadError": "Не удалось загрузить остатки. Проверьте сеть и права доступа."
+    "loadError": "Не удалось загрузить остатки. Проверьте сеть и права доступа.",
+    "warehouseZone": "Склад / зона",
+    "columns": "Колонки",
+    "columnsTitle": "Видимые колонки"
   },
   "transfers": {
     "title": "Перемещение",
@@ -545,6 +646,12 @@
     "authLoginFailed": "Неуспешный вход",
     "allPages": "Все разделы",
     "pageView": "Переход на страницу",
+    "actionListView": "Просмотр списка",
+    "actionCreateRecord": "Создание записи",
+    "actionUpdateRecord": "Изменение записи",
+    "actionDeleteRecord": "Удаление записи",
+    "apiTooltip": "Наведите курсор на ячейку, чтобы увидеть технический запрос (метод и путь API).",
+    "actionOther": "Запрос к API",
     "allTime": "За всё время",
     "period24h": "Последние 24 часа",
     "period7d": "Последние 7 дней",

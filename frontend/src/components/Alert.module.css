@@ -1,0 +1,179 @@
+.alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+  backdrop-filter: blur(var(--glass-blur));
+  animation: slideIn 0.2s ease;
+}
+
+.content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.text {
+  flex: 1;
+}
+
+.title {
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.message {
+  font-size: 13px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+.children {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.actionButton,
+.closeButton {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 500;
+
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+}
+
+.closeButton {
+  padding: 4px 6px;
+  min-width: 20px;
+  text-align: center;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+/* ===== TYPES ===== */
+.alert-info {
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: #3b82f6;
+  color: #3b82f6;
+
+  .title,
+  .actionButton {
+    color: #3b82f6;
+  }
+
+  .message,
+  .children {
+    color: var(--text);
+  }
+}
+
+.alert-success {
+  background-color: rgba(63, 185, 80, 0.12);
+  border-color: #3fb950;
+  color: #3fb950;
+
+  .title,
+  .actionButton {
+    color: #3fb950;
+  }
+
+  .message,
+  .children {
+    color: var(--text);
+  }
+}
+
+.alert-warning {
+  background-color: rgba(212, 160, 23, 0.12);
+  border-color: #d4a017;
+  color: #d4a017;
+
+  .title,
+  .actionButton {
+    color: #d4a017;
+  }
+
+  .message,
+  .children {
+    color: var(--text);
+  }
+}
+
+.alert-error {
+  background-color: rgba(248, 81, 73, 0.12);
+  border-color: #f85149;
+  color: #f85149;
+
+  .title,
+  .actionButton {
+    color: #f85149;
+  }
+
+  .message,
+  .children {
+    color: var(--text);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+html[data-theme='light'] {
+  .alert-info {
+    background-color: rgba(37, 99, 235, 0.08);
+  }
+
+  .alert-success {
+    background-color: rgba(46, 125, 50, 0.08);
+  }
+
+  .alert-warning {
+    background-color: rgba(183, 129, 0, 0.08);
+  }
+
+  .alert-error {
+    background-color: rgba(198, 40, 40, 0.08);
+  }
+}

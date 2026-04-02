@@ -1,6 +1,8 @@
 """
 Middleware: текущий пользователь (audit) и язык API из Accept-Language.
 """
+from rest_framework import status
+from rest_framework.response import Response
 from django.utils import translation
 from django.conf import settings
 
@@ -66,3 +68,35 @@ class AuditCurrentUserMiddleware:
             device=device_name(user_agent),
             details={"query": dict(request.GET), "path": request.path},
         )
+
+
+class ReadOnlyRoleGuardMiddleware:
+    """
+    Запрещает любые mutating API-методы для read-only ролей.
+    Используется для профилей руководства: полный просмотр без изменений данных.
+    """
+
+    READ_ONLY_ROLE_NAMES = {"executive_readonly"}
+    READ_ONLY_USERNAMES = {"bashkent1"}
+    ALLOWED_MUTATING_PATHS = {"/api/auth/logout/"}
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if (
+            request.path.startswith("/api/")
+            and request.method not in ("GET", "HEAD", "OPTIONS")
+            and request.path not in self.ALLOWED_MUTATING_PATHS
+            and getattr(request, "user", None)
+            and request.user.is_authenticated
+            and (
+                getattr(getattr(request.user, "role", None), "name", None) in self.READ_ONLY_ROLE_NAMES
+                or getattr(request.user, "username", "") in self.READ_ONLY_USERNAMES
+            )
+        ):
+            return Response(
+                {"detail": "Профиль только для просмотра. Изменение данных запрещено."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return self.get_response(request)

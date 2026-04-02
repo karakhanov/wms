@@ -1,0 +1,124 @@
+.tooltipWrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1000;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  animation: tooltipFadeIn 0.2s ease;
+  pointer-events: none;
+}
+
+.tooltipContent {
+  position: relative;
+  z-index: 1;
+}
+
+.tooltipArrow {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+  content: '';
+}
+
+/* ===== POSITIONS ===== */
+.position-top {
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  .tooltipArrow {
+    bottom: -3px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+  }
+}
+
+.position-bottom {
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+
+  .tooltipArrow {
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+  }
+}
+
+.position-left {
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+
+  .tooltipArrow {
+    right: -3px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+  }
+}
+
+.position-right {
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+
+  .tooltipArrow {
+    left: -3px;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+  }
+}
+
+/* ===== THEMES ===== */
+.theme-dark {
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+
+  .tooltipArrow {
+    background: rgba(0, 0, 0, 0.8);
+  }
+}
+
+.theme-light {
+  background: rgba(255, 255, 255, 0.95);
+  color: #111827;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+
+  .tooltipArrow {
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-width: 0 1px 1px 0;
+  }
+}
+
+.theme-primary {
+  background: var(--accent);
+  color: white;
+
+  .tooltipArrow {
+    background: var(--accent);
+  }
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .tooltip {
+    display: none;
+  }
+}

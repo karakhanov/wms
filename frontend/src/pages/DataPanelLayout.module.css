@@ -1,0 +1,497 @@
+/* Единая карточка: тулбар (заголовок + фильтры) → разделитель → таблица/контент.
+ * Используется на карточке товара (с табами) и на списочных страницах. */
+
+.dataPanelSection {
+  margin-top: 14px;
+  margin-bottom: 12px;
+}
+
+.dataPanelSectionFlushTop {
+  margin-top: 0;
+}
+
+.tabsBar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.tabsBar > button {
+  min-height: 40px;
+  width: 100%;
+  justify-content: center;
+}
+
+.dataPanelCard {
+  display: flex;
+  flex-direction: column;
+  flex: 0 1 auto;
+  width: 100%;
+  min-height: 0;
+  gap: 0;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg-strong);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  overflow: hidden;
+}
+
+.dataPanelTableWrap {
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow: visible;
+  align-self: stretch;
+}
+
+.dataPanelToolbar {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+html[data-theme='dark'] .dataPanelToolbar {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.dataPanelDivider {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--glass-border);
+  flex-shrink: 0;
+}
+
+.dataPanelBody {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.dataPanelBlockLoading {
+  color: var(--muted);
+  padding: 10px 0;
+  font-size: 0.92rem;
+}
+
+.filterToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px 16px;
+  flex-wrap: wrap;
+}
+
+.filterToolbarLead {
+  order: 1;
+  flex: 0 0 auto;
+  min-width: min(100%, 200px);
+  display: flex;
+  align-items: center;
+}
+
+.filterToolbarLeadRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filterToolbarLeadExtra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filterToolbarHeadline {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.filterToolbarSearch {
+  order: 2;
+  flex: 1 1 auto;
+  min-width: 200px;
+  max-width: 400px;
+  display: flex;
+  align-items: stretch;
+}
+
+.filterToolbarActions {
+  order: 3;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px 12px;
+  flex-wrap: wrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+}
+
+/* Поля тулбара списков: поиск + select + date — один размер и рамка */
+.toolbarControl {
+  box-sizing: border-box;
+  margin: 0;
+  min-height: 38px;
+  padding: 8px 11px;
+  font: inherit;
+  font-size: 0.84rem;
+  line-height: 1.25;
+  color: var(--text);
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+html[data-theme='light'] .toolbarControl {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+html[data-theme='dark'] .toolbarControl {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.toolbarControl::placeholder {
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+.toolbarControl:focus {
+  outline: none;
+  border-color: rgba(var(--accent-rgb), 0.45);
+  box-shadow: var(--focus-ring);
+}
+
+.toolbarSearchInput {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding-left: 2.1rem;
+  padding-right: 2rem;
+  border-color: transparent;
+  background: transparent;
+}
+
+.toolbarSearchInput::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+.toolbarSearchInput:focus {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.toolbarSearchShell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border-radius: var(--radius-md);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+html[data-theme='light'] .toolbarSearchShell {
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+html[data-theme='dark'] .toolbarSearchShell {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  background: linear-gradient(180deg, rgba(30, 41, 59, 0.55) 0%, rgba(15, 23, 42, 0.45) 100%);
+}
+
+.toolbarSearchShell:focus-within {
+  border-color: rgba(var(--accent-rgb), 0.5);
+  box-shadow: var(--focus-ring);
+}
+
+.toolbarSearchIcon {
+  position: absolute;
+  left: 0.72rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted);
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.toolbarSearchIcon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.toolbarSearchClear {
+  position: absolute;
+  right: 0.42rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1.3rem;
+  height: 1.3rem;
+  border: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.toolbarSearchClear:hover {
+  color: var(--text);
+  background: rgba(var(--accent-rgb), 0.12);
+}
+
+.toolbarSearchClear:focus-visible {
+  outline: 2px solid rgba(var(--accent-rgb), 0.45);
+  outline-offset: 1px;
+}
+
+.toolbarFilterSelect {
+  width: auto;
+  min-width: 140px;
+  max-width: 220px;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.toolbarFilterDate {
+  width: auto;
+  min-width: 140px;
+  max-width: 168px;
+}
+
+.toolbarPaginationSelect {
+  min-width: auto;
+  max-width: 12rem;
+}
+
+.toolbarCheckboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  width: auto;
+  min-width: auto;
+  max-width: none;
+  font-weight: 500;
+  font-size: 0.8125rem;
+}
+
+.filterControl {
+  min-height: 40px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+html[data-theme='light'] .filterControl {
+  background: #fff;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+html[data-theme='dark'] .filterControl {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+.filterCheckbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.filterCheckbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: rgb(var(--accent-rgb));
+}
+
+.filterDateCluster {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+
+.filterClusterLabel {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.filterClusterLabelDoc {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  line-height: 1.25;
+  max-width: 11rem;
+  flex: 0 0 auto;
+}
+
+.filterDocToolbar {
+  align-items: center;
+}
+
+.filterDocSearch {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 320px;
+}
+
+.filterInlineField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filterInlineLabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.filterInlineField .filterControl {
+  width: 158px;
+  min-width: 140px;
+  flex: 0 0 auto;
+}
+
+.filterQuickRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filterGhostBtn {
+  min-height: 40px;
+  padding: 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .filterGhostBtn {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.filterGhostBtn:hover {
+  border-color: rgba(148, 163, 184, 0.55);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text);
+}
+
+html[data-theme='light'] .filterGhostBtn:hover {
+  border-color: rgba(148, 163, 184, 0.55);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text);
+}
+
+html[data-theme='dark'] .filterGhostBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.filterGhostBtnActive {
+  border-color: rgba(var(--accent-rgb), 0.45);
+  background: rgba(var(--accent-rgb), 0.1);
+  color: var(--text);
+}
+
+.filterGhostBtnDanger {
+  border-color: rgba(244, 63, 94, 0.35);
+  background: rgba(244, 63, 94, 0.08);
+  color: #9f1239;
+}
+
+html[data-theme='dark'] .filterGhostBtnDanger {
+  color: #fda4af;
+}
+
+.filterGhostBtnDanger:hover {
+  border-color: rgba(244, 63, 94, 0.55);
+  background: rgba(244, 63, 94, 0.14);
+}
+
+.filterGhostBtnDangerActive {
+  border-color: rgba(244, 63, 94, 0.65);
+  background: rgba(244, 63, 94, 0.18);
+}
+
+@media (max-width: 980px) {
+  .tabsBar {
+    grid-template-columns: 1fr;
+  }
+
+  .filterToolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filterToolbarSearch {
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filterToolbarActions {
+    justify-content: flex-start;
+    margin-left: 0;
+    flex-basis: auto;
+  }
+
+  .filterDateCluster {
+    width: 100%;
+  }
+
+  .filterInlineField .filterControl {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+
+  .filterDocSearch {
+    max-width: none;
+    width: 100%;
+  }
+}

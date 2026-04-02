@@ -1,0 +1,56 @@
+---
+description: Unified UI/UX structure and styling standard for WMS pages
+globs:
+  - "frontend/src/pages/**/*.jsx"
+  - "frontend/src/pages/**/*.css"
+alwaysApply: true
+---
+
+# WMS UI/UX Structure Standard
+
+Apply these rules to all new and updated UI pages.
+
+## 1) Page Structure
+
+Use one consistent page skeleton:
+1. Header row: back icon + title.
+2. Hero block: left media/photo card, right info card.
+3. Tabs block (even if only one tab is currently used).
+4. Tab content block (table/list/details).
+
+Do not mix unrelated controls into the header when they belong to the info card context.
+
+## 2) Visual Language
+
+- Keep visual style clean and restrained (enterprise SaaS style).
+- Prefer soft neutral backgrounds and thin borders over strong gradients.
+- Avoid decorative effects that reduce readability.
+- Use consistent corner radii and spacing rhythm (8/12/16/24).
+- Keep actions compact and predictable.
+
+## 3) Information Cards
+
+- Display key-value pairs as compact cards in a 2-column grid on desktop.
+- If odd card count, make the last item full width.
+- In edit mode, keep the same grid rhythm and dimensions to avoid layout jumps.
+- Maintain stable vertical height between view and edit states as much as possible.
+
+## 4) Buttons and Navigation
+
+- Back control uses icon-only button in a consistent style.
+- Primary action should be context-aware and placed near the data it changes.
+- Avoid text underlines on icon-only controls.
+
+## 5) Tables
+
+- Keep table headers readable and not oversized.
+- Ensure row spacing and column widths are balanced.
+- Preserve one consistent style for borders/hover/empty states.
+- For **list pages** (toolbar + table + pagination), use the **unified data panel** pattern: one card, title and filters on one row, divider, then table. See rule **unified-data-table-panel** and `ListPageDataPanel` + `DataPanelLayout.module.css`.
+
+## 6) UX Behavior
+
+- Prefer inline editing on detail pages when feasible.
+- Avoid forced route changes for small edits.
+- Keep user context stable while editing and saving.
+

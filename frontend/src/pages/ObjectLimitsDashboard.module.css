@@ -1,0 +1,35 @@
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  padding: 12px;
+}
+
+.cardTitle {
+  font-weight: 700;
+}
+
+.cardMeta {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.line {
+  font-size: 13px;
+}
+
+.line + .line {
+  margin-top: 2px;
+}
+
+.lineStrong {
+  margin-bottom: 8px;
+}
+
+.danger {
+  color: var(--danger);
+}

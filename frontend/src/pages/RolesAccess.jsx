@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { users as usersApi } from '../api'
 import { useAuth } from '../auth'
 import { canManageRoles } from '../permissions'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
+import DataTable from '../components/DataTable'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect } from '../components/ToolbarControls'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
+import panelStyles from './DataPanelLayout.module.css'
 import styles from './Table.module.css'
 import formStyles from './Form.module.css'
 
@@ -25,6 +28,7 @@ export default function RolesAccess() {
   const [resourceFilter, setResourceFilter] = useState('')
   const [rolesSort, setRolesSort] = useState({ key: 'name', dir: 'asc' })
   const [resourcesSort, setResourcesSort] = useState({ key: 'resource', dir: 'asc' })
+  const [rolesSelectedIds, setRolesSelectedIds] = useState(new Set())
   const [error, setError] = useState('')
   const debouncedSearch = useDebouncedValue(search, 300)
 
@@ -180,31 +184,44 @@ export default function RolesAccess() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('rolesAccess.title')}</h1>
-        </div>
-      </div>
-
-      <TableToolbar search={search} onSearchChange={setSearch} onExport={exportCsv} exportDisabled={!sortedRoles.length || !sortedResources.length}>
-        <select className={toolbarStyles.filterSelect} value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-          <option value="">{t('rolesAccess.role')}</option>
-          {roles.map((r) => (
-            <option key={r.id} value={r.name}>
-              {roleLabel(r.name)}
-            </option>
-          ))}
-        </select>
-        <select className={toolbarStyles.filterSelect} value={resourceFilter} onChange={(e) => setResourceFilter(e.target.value)}>
-          <option value="">{t('rolesAccess.resource')}</option>
-          {resources.map((resource) => (
-            <option key={resource} value={resource}>
-              {resourceLabel(resource)}
-            </option>
-          ))}
-        </select>
-      </TableToolbar>
-
+      <ListPageDataPanel
+        flushTop
+        title={t('rolesAccess.title')}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={!sortedRoles.length || !sortedResources.length}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
+          <>
+            <ToolbarFilterSelect value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
+              <option value="">{t('rolesAccess.role')}</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.name}>
+                  {roleLabel(r.name)}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={resourceFilter} onChange={(e) => setResourceFilter(e.target.value)}>
+              <option value="">{t('rolesAccess.resource')}</option>
+              {resources.map((resource) => (
+                <option key={resource} value={resource}>
+                  {resourceLabel(resource)}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+          </>
+        )}
+      >
       <div className={formStyles.row}>
         <label>{t('rolesAccess.addRole')}</label>
         <div className={formStyles.actions}>
@@ -220,38 +237,54 @@ export default function RolesAccess() {
         </div>
       </div>
 
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <SortHeader className={styles.sortableHeader} label={t('rolesAccess.role')} sortKey="name" activeKey={rolesSort.key} sortDir={rolesSort.dir} onToggle={toggleRolesSort} />
-              <th>{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sortedRoles.map((r) => (
-              <tr key={r.id}>
-                <td>{roleLabel(r.name)}</td>
-                <td>
-                  <button
-                    className={`${formStyles.btn} ${formStyles.btnSecondary}`}
-                    type="button"
-                    onClick={() => editRole(r.id, r.name)}
-                    style={{ marginRight: '0.4rem' }}
-                  >
-                    {t('common.edit')}
-                  </button>
-                  <button className={`${formStyles.btn} ${formStyles.btnSecondary}`} type="button" onClick={() => deleteRole(r.id)}>
-                    {t('common.delete')}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        columns={[
+          { key: 'name', header: <SortHeader className={styles.sortableHeader} label={t('rolesAccess.role')} sortKey="name" activeKey={rolesSort.key} sortDir={rolesSort.dir} onToggle={toggleRolesSort} /> },
+          { key: 'actions', header: t('common.actions') },
+        ]}
+        rows={sortedRoles}
+        rowKey="id"
+        selection={{
+          selectedIds: rolesSelectedIds,
+          onToggleAll: (checked) => setRolesSelectedIds(checked ? new Set(sortedRoles.map((r) => r.id)) : new Set()),
+          onToggleOne: (id, checked) => {
+            const next = new Set(rolesSelectedIds)
+            if (checked) next.add(id)
+            else next.delete(id)
+            setRolesSelectedIds(next)
+          },
+        }}
+        renderCell={(r, col) => {
+          if (col.key === 'name') return roleLabel(r.name)
+          if (col.key === 'actions') {
+            return (
+              <>
+                <button
+                  className={`${formStyles.btn} ${formStyles.btnSecondary}`}
+                  type="button"
+                  onClick={() => editRole(r.id, r.name)}
+                  style={{ marginRight: '0.4rem' }}
+                >
+                  {t('common.edit')}
+                </button>
+                <button className={`${formStyles.btn} ${formStyles.btnSecondary}`} type="button" onClick={() => deleteRole(r.id)}>
+                  {t('common.delete')}
+                </button>
+              </>
+            )
+          }
+          return null
+        }}
+        page={1}
+        pageCount={1}
+        total={sortedRoles.length}
+        onPageChange={() => {}}
+        pageSize={sortedRoles.length || 1}
+        onPageSizeChange={undefined}
+        disabled={loading}
+      />
 
-      <div className={styles.tableWrap} style={{ marginTop: '1rem' }}>
+      <div className={`${styles.tableWrap} ${panelStyles.dataPanelTableWrap}`} style={{ marginTop: '1rem' }}>
         <table className={styles.table}>
           <thead>
             <tr>
@@ -297,6 +330,7 @@ export default function RolesAccess() {
           {saving ? t('common.loading') : t('common.save')}
         </button>
       </div>
+      </ListPageDataPanel>
     </div>
   )
 }

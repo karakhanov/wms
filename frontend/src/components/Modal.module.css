@@ -6,9 +6,10 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: overlayFadeIn 0.2s ease;
 }
 
 /* Поверх основной модалки (быстрое создание связанной сущности) */
@@ -30,10 +31,16 @@
   max-height: min(90vh, 900px);
   display: flex;
   flex-direction: column;
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   border: 1px solid var(--glass-border);
   background: var(--glass-bg-strong);
   box-shadow: var(--shadow-md);
+  animation: panelSlideIn 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.panelSm {
+  max-width: min(24rem, 100%);
 }
 
 .panelWide {
@@ -44,29 +51,44 @@
   max-width: min(64rem, 100%);
 }
 
+.panelDrawer {
+  margin-left: auto;
+  height: 100vh;
+  max-height: 100vh;
+  max-width: min(640px, 96vw);
+  border-radius: 16px 0 0 16px;
+  animation: panelDrawerIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 .head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.15rem;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
 }
 
 .title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 650;
+  font-size: 1.02rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.3;
   color: var(--text);
 }
 
+.subtitle {
+  margin: 0.18rem 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .closeBtn {
   flex-shrink: 0;
-  width: 2rem;
-  height: 2rem;
+  width: 1.9rem;
+  height: 1.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -74,7 +96,7 @@
   padding: 0;
   border: none;
   border-radius: var(--radius-sm);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   line-height: 1;
   color: var(--muted);
   background: transparent;
@@ -94,8 +116,56 @@ html[data-theme='light'] .closeBtn:hover {
 }
 
 .body {
-  padding: 1rem 1.15rem 1.2rem;
+  padding: 0.9rem 1rem 1rem;
   overflow: auto;
   flex: 1;
   min-height: 0;
+}
+
+.footer {
+  padding: 0.8rem 1rem;
+  border-top: 1px solid var(--border-subtle);
+  background: transparent;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes panelDrawerIn {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel {
+    animation: none !important;
+  }
 }

@@ -29,7 +29,18 @@ class StockBalanceViewSet(SetAuditUserMixin, viewsets.ReadOnlyModelViewSet):
         "cell__rack__zone__name",
         "cell__rack__zone__warehouse__name",
     )
-    ordering_fields = ("id", "quantity", "updated_at")
+    ordering_fields = (
+        "id",
+        "quantity",
+        "updated_at",
+        "product__sku",
+        "product__name",
+        "product__barcode",
+        "product__category__name",
+        "product__unit",
+        "cell__rack__zone__warehouse__name",
+        "cell__rack__zone__name",
+    )
     ordering = ("-quantity",)
 
 

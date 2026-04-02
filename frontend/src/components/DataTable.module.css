@@ -1,0 +1,74 @@
+.shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  background: var(--surface);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 920px;
+  font-size: 0.85rem;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: color-mix(in srgb, var(--surface) 88%, #e2e8f0 12%);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.72rem 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: 0.72rem 0.9rem;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface) 94%, #e2e8f0 6%);
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface) 91%, rgb(var(--accent-rgb)) 9%);
+}
+
+.rowNoCol {
+  width: 52px;
+  min-width: 52px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--text) 84%, var(--muted) 16%);
+}
+
+.empty {
+  padding: 1rem !important;
+  text-align: center;
+  color: var(--muted);
+}
+
+.footer {
+  border-top: 1px solid var(--border-subtle);
+  padding: 0.6rem 0.85rem;
+  background: color-mix(in srgb, var(--surface) 90%, #e2e8f0 10%);
+}
+
+html[data-theme='dark'] .footer {
+  background: color-mix(in srgb, var(--surface) 92%, #0f172a 8%);
+}

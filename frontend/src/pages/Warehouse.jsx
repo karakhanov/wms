@@ -5,7 +5,7 @@ import { useAuth } from '../auth'
 import { canManageWarehouse } from '../permissions'
 import QuickWarehouseModal from '../components/QuickWarehouseModal'
 import QuickZoneModal from '../components/QuickZoneModal'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
 import PaginationBar from '../components/PaginationBar'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
@@ -13,8 +13,9 @@ import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect } from '../components/ToolbarControls'
+import panelStyles from './DataPanelLayout.module.css'
 import styles from './Table.module.css'
-
 export default function Warehouse() {
   const { t } = useTranslation()
   const { user } = useAuth()
@@ -179,11 +180,10 @@ export default function Warehouse() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('warehouse.title')}</h1>
-        </div>
-        {canManage && (
+      <ListPageDataPanel
+        flushTop
+        title={t('warehouse.title')}
+        leadExtra={canManage ? (
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
             <button type="button" className={styles.btnAdd} onClick={() => setQuickWhOpen(true)}>
               {t('warehouse.newWarehouse')}
@@ -192,35 +192,41 @@ export default function Warehouse() {
               {t('warehouse.newZone')}
             </button>
           </div>
+        ) : null}
+        loading={loadingWh}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportWarehouses} disabled={loadingWh}>
+            {t('common.exportExcel')}
+          </button>
         )}
-      </div>
-
-      <h2 className={styles.h2}>{t('warehouse.warehousesSection')}</h2>
-      <TableToolbar
-        search={whSearch}
-        onSearchChange={(v) => {
-          setWhSearch(v)
-          setWhPage(1)
-        }}
-        onExport={exportWarehouses}
-        exportDisabled={loadingWh}
-      />
-      {loadingWh ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
+        search={(
+          <ToolbarSearchInput
+            value={whSearch}
+            onChange={(e) => {
+              setWhSearch(e.target.value)
+              setWhPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('warehouse.warehousesSection')}
+          />
+        )}
+        filters={null}
+      >
+        <h2 className={styles.h2} style={{ margin: '0 0 4px' }}>{t('warehouse.warehousesSection')}</h2>
+        <div className={`${styles.tableWrap} ${panelStyles.dataPanelTableWrap}`}>
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th>№</th>
                   <SortHeader className={styles.sortableHeader} label={t('warehouse.nameCol')} sortKey="name" activeKey={whSort.key} sortDir={whSort.dir} onToggle={toggleWhSort} />
                   <SortHeader className={styles.sortableHeader} label={t('warehouse.address')} sortKey="address" activeKey={whSort.key} sortDir={whSort.dir} onToggle={toggleWhSort} />
                   {canManage && <th></th>}
                 </tr>
               </thead>
               <tbody>
-                {sortedWarehouses.map((w) => (
+                {sortedWarehouses.map((w, idx) => (
                   <tr key={w.id}>
+                    <td>{(whPage - 1) * whPageSize + idx + 1}</td>
                     <td>{w.name}</td>
                     <td>{w.address || t('common.none')}</td>
                     {canManage && (
@@ -234,64 +240,74 @@ export default function Warehouse() {
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
-              page={whPage}
-              pageCount={whPages}
-              total={whCount}
-              onPageChange={setWhPage}
-              pageSize={whPageSize}
-              onPageSizeChange={(size) => { setWhPageSize(size); setWhPage(1) }}
-              disabled={loadingWh}
-            />
-          </div>
         </div>
-      )}
+        <div className={styles.paginationDock}>
+          <PaginationBar
+            page={whPage}
+            pageCount={whPages}
+            total={whCount}
+            onPageChange={setWhPage}
+            pageSize={whPageSize}
+            onPageSizeChange={(size) => { setWhPageSize(size); setWhPage(1) }}
+            disabled={loadingWh}
+          />
+        </div>
+      </ListPageDataPanel>
 
-      <h2 className={styles.h2}>{t('warehouse.zonesSection')}</h2>
-      <TableToolbar
-        search={zoneSearch}
-        onSearchChange={(v) => {
-          setZoneSearch(v)
-          setZonePage(1)
-        }}
-        onExport={exportZones}
-        exportDisabled={loadingZn}
+      <ListPageDataPanel
+        title={t('warehouse.zonesSection')}
+        titleTag="h2"
+        loading={loadingZn}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportZones} disabled={loadingZn}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={zoneSearch}
+            onChange={(e) => {
+              setZoneSearch(e.target.value)
+              setZonePage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('warehouse.zonesSection')}
+          />
+        )}
+        filters={(
+          <>
+            <ToolbarFilterSelect
+              value={zoneWarehouse}
+              onChange={(e) => {
+                setZoneWarehouse(e.target.value)
+                setZonePage(1)
+              }}
+              aria-label={t('warehouse.wh')}
+            >
+              <option value="">{t('common.all')} — {t('warehouse.wh')}</option>
+              {whListForFilter.map((w) => (
+                <option key={w.id} value={String(w.id)}>
+                  {w.name}
+                </option>
+              ))}
+            </ToolbarFilterSelect>
+          </>
+        )}
       >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={zoneWarehouse}
-          onChange={(e) => {
-            setZoneWarehouse(e.target.value)
-            setZonePage(1)
-          }}
-          aria-label={t('warehouse.wh')}
-        >
-          <option value="">{t('common.all')} — {t('warehouse.wh')}</option>
-          {whListForFilter.map((w) => (
-            <option key={w.id} value={String(w.id)}>
-              {w.name}
-            </option>
-          ))}
-        </select>
-      </TableToolbar>
-      {loadingZn ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
+        <div className={`${styles.tableWrap} ${panelStyles.dataPanelTableWrap}`}>
             <table className={styles.table}>
               <thead>
                 <tr>
+                  <th>№</th>
                   <SortHeader className={styles.sortableHeader} label={t('warehouse.zoneName')} sortKey="name" activeKey={zoneSort.key} sortDir={zoneSort.dir} onToggle={toggleZoneSort} />
                   <SortHeader className={styles.sortableHeader} label={t('warehouse.zoneCode')} sortKey="code" activeKey={zoneSort.key} sortDir={zoneSort.dir} onToggle={toggleZoneSort} />
                   <SortHeader className={styles.sortableHeader} label={t('warehouse.wh')} sortKey="warehouse" activeKey={zoneSort.key} sortDir={zoneSort.dir} onToggle={toggleZoneSort} />
                 </tr>
               </thead>
               <tbody>
-                {sortedZones.map((z) => (
+                {sortedZones.map((z, idx) => (
                   <tr key={z.id}>
+                    <td>{(zonePage - 1) * zonePageSize + idx + 1}</td>
                     <td>{z.name}</td>
                     <td>{z.code || t('common.none')}</td>
                     <td>{z.warehouse_name || whListForFilter.find((w) => w.id === z.warehouse)?.name || t('common.none')}</td>
@@ -299,20 +315,19 @@ export default function Warehouse() {
                 ))}
               </tbody>
             </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
-              page={zonePage}
-              pageCount={zonePages}
-              total={zoneCount}
-              onPageChange={setZonePage}
-              pageSize={zonePageSize}
-              onPageSizeChange={(size) => { setZonePageSize(size); setZonePage(1) }}
-              disabled={loadingZn}
-            />
-          </div>
         </div>
-      )}
+        <div className={styles.paginationDock}>
+          <PaginationBar
+            page={zonePage}
+            pageCount={zonePages}
+            total={zoneCount}
+            onPageChange={setZonePage}
+            pageSize={zonePageSize}
+            onPageSizeChange={(size) => { setZonePageSize(size); setZonePage(1) }}
+            disabled={loadingZn}
+          />
+        </div>
+      </ListPageDataPanel>
 
       {canManage && (
         <>

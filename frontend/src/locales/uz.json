@@ -7,7 +7,27 @@
     "version": "Versiya {{version}}",
     "sidebarHint": "Bashkent korporativ ombor hisobi",
     "readyPickupTitle": "Berishga tayyor nakladnoylar: {{count}}",
-    "readyPickupNavTitle": "Berishga tayyor: {{count}}"
+    "readyPickupNavTitle": "Berishga tayyor: {{count}}",
+    "breadcrumb": {
+      "details": "Karta",
+      "unknown": "Bo'lim",
+      "aria": "Bo'limlar bo'yicha navigatsiya"
+    },
+    "notificationsEmpty": "O'qilmagan bildirishnomalar yo'q",
+    "notificationsViewAll": "Barcha bildirishnomalar",
+    "notificationsLoadError": "Bildirishnomalarni yuklab bo'lmadi",
+    "profileSettings": "Profil sozlamalari",
+    "userMenu": "Foydalanuvchi menyusi",
+    "notificationsMenu": "Bildirishnomalar",
+    "navGroups": {
+      "group1": "Dashboard",
+      "group2": "Ma'lumotnomalar",
+      "group3": "Obyektlar va limitlar",
+      "group4": "Hujjatlar",
+      "group5": "Ombor operatsiyalari",
+      "group6": "Hisobotlar",
+      "group7": "Ma'muriyat"
+    }
   },
   "nav": {
     "dashboard": "Boshqaruv paneli",
@@ -15,6 +35,7 @@
     "categories": "Toifalar",
     "warehouse": "Ombor",
     "objects": "Obyektlar",
+    "services": "Xizmatlar",
     "suppliers": "Yetkazib beruvchilar",
     "receipts": "Qabul",
     "orders": "Yuklash",
@@ -27,6 +48,49 @@
     "issueNotes": "Nakladnoylar",
     "notifications": "Bildirishnomalar",
     "history": "Tarix"
+    ,"objectLimits": "Obyekt limitlari"
+    ,"objectTypes": "Obyekt turlari"
+    ,"about": "Tizim haqida",
+    "profilePage": "Profil"
+  },
+  "profile": {
+    "lead": "Hisobingiz haqida qisqacha ma'lumot.",
+    "displayName": "Ko'rinadigan ism",
+    "contactAdmin": "Login, rol yoki parolni o'zgartirish uchun ma'murga murojaat qiling."
+  },
+  "about": {
+    "title": "Tizim haqida",
+    "intro": "Bashkent WMS: mahsulotlar, hujjatlar, obyektlar va limitlarning korporativ ombor hisobi."
+  },
+  "objectDetails": {
+    "notSet": "Belgilanmagan",
+    "uploadPhoto": "Rasm yuklash",
+    "backToObjects": "Obyektlarga qaytish",
+    "noPhotoYet": "Rasm hali yuklanmagan",
+    "fieldCode": "Kod",
+    "fieldType": "Tur",
+    "fieldAddress": "Manzil",
+    "fieldLimitAmount": "Summa limiti",
+    "fieldLimitQty": "Miqdor limiti",
+    "tabOverview": "Xulosa",
+    "tabLimits": "Limitlar",
+    "tabProducts": "Mahsulotlar",
+    "tabServices": "Xizmatlar",
+    "tabUtilization": "Yuklama",
+    "tabsAria": "Obyekt kartasi bo‘limlari",
+    "addLimit": "Limit qo‘shish",
+    "addLimitNeedType": "Limitlarni tahrirlash uchun avval obyekt turini belgilang",
+    "limitsEmptyTitle": "Limitlar qo‘shilmagan",
+    "limitsEmptyHint": "Limitlar obyekt turida sozlanadi. Tur tahrirlagichini oching va miqdoriy limitli pozitsiyalar qo‘shing.",
+    "limitsFilteredEmpty": "Bu bo‘limda pozitsiyalar yo‘q",
+    "colKind": "Pozitsiya turi",
+    "colPosition": "Pozitsiya",
+    "colLimit": "Limit",
+    "colUsed": "Ishlatilgan",
+    "colRemaining": "Qoldiq",
+    "colPercent": "Yuklama",
+    "kindProduct": "Mahsulot",
+    "kindService": "Xizmat"
   },
   "login": {
     "title": "Bashkent WMS",
@@ -55,7 +119,11 @@
     "send": "Yuborish",
     "cancel": "Bekor qilish",
     "back": "Orqaga",
+    "forward": "Keyingi",
     "confirmDelete": "Yozuvni oʻchirish?",
+    "confirmDeleteTitle": "Oʻchirishni tasdiqlang",
+    "confirmDeleteBody": "«{{name}}»ni oʻchirishni xohlaysizmi? Bu amalni bekor qilib boʻlmaydi.",
+    "recordFallback": "ushbu yozuvni",
     "photo": "Rasm",
     "closeDialog": "Yopish",
     "search": "Qidiruv",
@@ -84,7 +152,12 @@
     "rowsPerPage": "Sahifadagi qatorlar",
     "toggleSidebar": "Yon menyuni yig'ish/ochish",
     "menu": "Menyu",
-    "pageNumber": "{{page}}-sahifa"
+    "pageNumber": "{{page}}-sahifa",
+    "noData": "Maʼlumot yoʻq",
+    "emptyStateHintWithAdd": "Birinchi yozuvni sahifa yuqorisidagi «+ {{addLabel}}» tugmasi orqali qoʻshing.",
+    "emptyStateHintList": "Hozircha yozuvlar yoʻq. Hujjat yarating yoki filtrlarni oʻzgartiring.",
+    "emptyStateFiltered": "Tanlangan filtrlarga mos yozuvlar yoʻq.",
+    "reportsEmptyHint": "Joriy maʼlumot yoki qidiruv boʻyicha hisobot uchun qatorlar yoʻq."
   },
   "dashboard": {
     "title": "Boshqaruv paneli",
@@ -109,6 +182,12 @@
     "kpiTransfers": "Koʻchirishlar",
     "kpiInventory": "Inventarizatsiya ochiq / jami",
     "kpiShortage": "Minimumdan past",
+    "kpiReceiptsPeriod": "Davr uchun qabul",
+    "kpiOrdersPeriod": "Davr uchun joʻnatish",
+    "kpiActiveOrders": "Faol buyurtmalar",
+    "kpiTransfersPeriod": "Koʻchirishlar",
+    "kpiOpenInventories": "Ochiq inventarizatsiyalar",
+    "kpiBelowMin": "Minimumdan past pozitsiyalar",
     "recentReceipts": "Soʻnggi qabul",
     "recentOrders": "Soʻnggi buyurtmalar",
     "colDoc": "Hujjat",
@@ -125,7 +204,26 @@
     "shortageEmpty": "Barcha pozitsiyalar normal",
     "openReports": "Hisobotlar",
     "modulesTitle": "Boʻlimlar",
-    "loadError": "Baʼzi maʼlumotlar yuklanmadi — API ruxsatini tekshiring"
+    "popularEmpty": "Hali joʻnatmalar yoʻq",
+    "recentNotifications": "Bildirishnomalar",
+    "notificationsEmpty": "Bildirishnomalar yoʻq",
+    "loadError": "Baʼzi maʼlumotlar yuklanmadi — API ruxsatini tekshiring",
+    "receiptsVsOrders": "Kunlar boʻyicha qabul vs joʻnatish",
+    "receipts": "Qabul",
+    "orders": "Joʻnatish",
+    "topProducts": "Joʻnatish boʻyicha TOP-10 mahsulotlar",
+    "byQuantity": "Miqdor boʻyicha",
+    "bySum": "Summa boʻyicha",
+    "noShipments": "Davrda joʻnatish yoʻq",
+    "stockByCategory": "Kategoriyalar boʻyicha qoldiq tuzilmasi",
+    "criticalStock": "Kritik qoldiq (minimumdan past)",
+    "showAll": "Hammasini koʻrsatish",
+    "allPositionsOk": "✓ Barcha pozitsiyalar normal",
+    "alert": "Kritik",
+    "operational": "Operatsiyalar",
+    "shortageDanger": "Tanqislik",
+    "shortageOk": "OK",
+    "summarySub": "Tanlab olingan davr uchun maʼlumotlar asosida"
   },
   "products": {
     "title": "Mahsulotlar",
@@ -211,7 +309,10 @@
     "updatedAt": "Yangilangan",
     "emptyList": "Hozircha qoldiq yozuvlari yo‘q.",
     "emptyFiltered": "Qidiruv yoki ombor filtri bo‘yicha qatorlar topilmadi.",
-    "loadError": "Qoldiqlarni yuklab bo‘lmadi. Tarmoq va ruxsatlarni tekshiring."
+    "loadError": "Qoldiqlarni yuklab bo‘lmadi. Tarmoq va ruxsatlarni tekshiring.",
+    "warehouseZone": "Ombor / zona",
+    "columns": "Ustunlar",
+    "columnsTitle": "Ko‘rinadigan ustunlar"
   },
   "transfers": {
     "title": "Koʻchirish",
@@ -546,6 +647,12 @@
     "authLoginFailed": "Muvaffaqiyatsiz kirish",
     "allPages": "Barcha bo'limlar",
     "pageView": "Sahifaga o'tish",
+    "actionListView": "Ro'yxatni ko'rish",
+    "actionCreateRecord": "Yozuv yaratish",
+    "actionUpdateRecord": "Yozuvni o'zgartirish",
+    "actionDeleteRecord": "Yozuvni o'chirish",
+    "apiTooltip": "API so'rovini (metod va yo'l) ko'rish uchun katakchaning ustiga kursor qo'ying.",
+    "actionOther": "API so'rovi",
     "allTime": "Butun vaqt",
     "period24h": "Oxirgi 24 soat",
     "period7d": "Oxirgi 7 kun",

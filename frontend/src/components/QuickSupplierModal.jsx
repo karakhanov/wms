@@ -51,6 +51,7 @@ export default function QuickSupplierModal({ open, onClose, onCreated, stackDept
       title={t('suppliers.new')}
       onClose={() => !loading && onClose()}
       stacked={outerStacked === false ? false : outerStacked}
+      drawer
     >
       <form onSubmit={handleSubmit} className={`${formStyles.form} ${formStyles.formModal}`}>
         {error && <div className={formStyles.error}>{error}</div>}

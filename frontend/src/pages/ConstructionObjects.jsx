@@ -1,35 +1,46 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link, useNavigate } from 'react-router-dom'
 import { construction as constructionApi } from '../api'
 import { useAuth } from '../auth'
 import { canManageWarehouse } from '../permissions'
-import Modal from '../components/Modal'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
+import EmptyState from '../components/EmptyState'
 import SortHeader from '../components/SortHeader'
 import PaginationBar from '../components/PaginationBar'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
+import { formatNumberCell } from '../utils/numberFormat'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
+import { ToolbarSearchInput } from '../components/ToolbarControls'
+import panelStyles from './DataPanelLayout.module.css'
 import tableStyles from './Table.module.css'
-import formStyles from './Form.module.css'
+import toolbarStyles from '../components/TableToolbar.module.css'
+import styles from './ConstructionObjects.module.css'
+
+function photoUrl(v) {
+  if (!v) return ''
+  const s = String(v)
+  if (s.startsWith('http')) return s
+  return `/${s}`.replace(/^\/+/, '/')
+}
 
 export default function ConstructionObjects() {
   const { t } = useTranslation()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const canManage = canManageWarehouse(user)
   const [tableData, setTableData] = useState({ results: [], count: 0 })
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const [formOpen, setFormOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState('asc')
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
-  const [form, setForm] = useState({ name: '', code: '', address: '' })
   const debouncedSearch = useDebouncedValue(search, 300)
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -54,30 +65,6 @@ export default function ConstructionObjects() {
     setPage(1)
   }, [debouncedSearch])
 
-  const create = async (e) => {
-    e.preventDefault()
-    setError('')
-    if (!form.name.trim()) {
-      setError(t('objects.validation'))
-      return
-    }
-    setSaving(true)
-    try {
-      await constructionApi.createObject({
-        name: form.name.trim(),
-        code: form.code.trim(),
-        address: form.address.trim(),
-      })
-      setForm({ name: '', code: '', address: '' })
-      setFormOpen(false)
-      await load()
-    } catch {
-      setError(t('objects.createError'))
-    } finally {
-      setSaving(false)
-    }
-  }
-
   const toggleSort = (key) => {
     setPage(1)
     if (sortKey === key) {
@@ -91,6 +78,14 @@ export default function ConstructionObjects() {
   const rows = tableData.results || []
   const count = tableData.count ?? rows.length
   const pages = totalPages(count, pageSize)
+  const listEmptyHint = useMemo(() => {
+    if (rows.length > 0) return ''
+    if (debouncedSearch.trim()) return t('common.emptyStateFiltered')
+    if (canManage) return t('common.emptyStateHintWithAdd', { addLabel: t('common.add') })
+    return t('common.emptyStateHintList')
+  }, [rows.length, debouncedSearch, canManage, t])
+
+  const requestDelete = (id, name) => setDeleteTarget({ id, name })
 
   const exportCsv = async () => {
     try {
@@ -114,97 +109,135 @@ export default function ConstructionObjects() {
   return (
     <div className={tableStyles.page}>
       {canManage && (
-        <Modal open={formOpen} title={t('objects.create')} onClose={() => setFormOpen(false)}>
-          <form className={`${formStyles.form} ${formStyles.formModal}`} onSubmit={create}>
-            <div className={formStyles.row}>
-              <label>{t('objects.name')}</label>
-              <input className={formStyles.input} value={form.name} onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))} />
-            </div>
-            <div className={formStyles.row}>
-              <label>{t('objects.code')}</label>
-              <input className={formStyles.input} value={form.code} onChange={(e) => setForm((v) => ({ ...v, code: e.target.value }))} />
-            </div>
-            <div className={formStyles.row}>
-              <label>{t('objects.address')}</label>
-              <input className={formStyles.input} value={form.address} onChange={(e) => setForm((v) => ({ ...v, address: e.target.value }))} />
-            </div>
-            {error ? <div className={formStyles.error}>{error}</div> : null}
-            <div className={formStyles.actions}>
-              <button className={`${formStyles.btn} ${formStyles.btnPrimary}`} type="submit" disabled={saving}>
-                {saving ? t('common.loading') : t('common.save')}
-              </button>
-              <button
-                type="button"
-                className={`${formStyles.btn} ${formStyles.btnSecondary}`}
-                onClick={() => setFormOpen(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
-          </form>
-        </Modal>
+        <ConfirmDeleteModal
+          open={!!deleteTarget}
+          itemName={deleteTarget?.name}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            if (!deleteTarget) return Promise.resolve()
+            return constructionApi.deleteObject(deleteTarget.id).then(() => load())
+          }}
+        />
       )}
-      <div className={tableStyles.pageHead}>
-        <div>
-          <h1 className={tableStyles.h1}>{t('objects.title')}</h1>
-        </div>
-        {canManage && (
-          <button type="button" className={tableStyles.btnAdd} onClick={() => setFormOpen(true)}>
+      <ListPageDataPanel
+        flushTop
+        title={t('objects.title')}
+        leadExtra={canManage ? (
+          <button type="button" className={tableStyles.btnAdd} onClick={() => navigate('/objects/new')}>
             {t('common.add')}
           </button>
+        ) : null}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading || !rows.length}>
+            {t('common.exportExcel')}
+          </button>
         )}
-      </div>
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading || !rows.length}
-      />
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={tableStyles.pageBody}>
-          <div className={tableStyles.tableWrap}>
-            <table className={tableStyles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={tableStyles.sortableHeader} label={t('objects.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={tableStyles.sortableHeader} label={t('objects.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={tableStyles.sortableHeader} label={t('objects.code')} sortKey="code" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={tableStyles.sortableHeader} label={t('objects.address')} sortKey="address" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.id}</td>
-                    <td>{r.name}</td>
-                    <td>{r.code || t('common.none')}</td>
-                    <td>{r.address || t('common.none')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={tableStyles.paginationDock}>
-            <PaginationBar
-              page={page}
-              pageCount={pages}
-              total={count}
-              onPageChange={setPage}
-              pageSize={pageSize}
-              onPageSizeChange={(size) => {
-                setPageSize(size)
-                setPage(1)
-              }}
-              disabled={loading}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={null}
+      >
+        <div className={`${tableStyles.listTableShell} ${panelStyles.dataPanelTableWrap}`}>
+          {rows.length === 0 ? (
+            <EmptyState
+              hint={listEmptyHint}
+              compact
+              actionLabel={canManage ? t('common.add') : undefined}
+              onAction={canManage ? () => navigate('/objects/new') : undefined}
             />
-          </div>
+          ) : (
+            <>
+              <div className={tableStyles.tableWrap}>
+                <table className={`${tableStyles.table} ${styles.objectsTable}`}>
+                  <thead>
+                    <tr>
+                      <SortHeader className={`${tableStyles.sortableHeader} ${styles.headStrong} ${styles.colNo}`} label={t('objects.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
+                      <th className={`${styles.headStrong} ${styles.colPhoto}`}>Фото</th>
+                      <SortHeader className={`${tableStyles.sortableHeader} ${styles.headStrong} ${styles.colObject}`} label={t('objects.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
+                      <SortHeader className={`${tableStyles.sortableHeader} ${styles.headStrong} ${styles.colCode}`} label={t('objects.code')} sortKey="code" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
+                      <th className={`${styles.headStrong} ${styles.colType}`}>Тип</th>
+                      <th className={`${styles.headStrong} ${styles.colAmount}`}>Лимит суммы</th>
+                      <SortHeader className={`${tableStyles.sortableHeader} ${styles.headStrong} ${styles.colAddress}`} label={t('objects.address')} sortKey="address" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
+                      <th className={styles.colActions} />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.id} className={styles.rowPremium}>
+                        <td className={styles.noCell}>{r.id}</td>
+                        <td>
+                          {photoUrl(r.photo_url || r.photo) ? (
+                            <span className={styles.thumbFrame} onClick={() => navigate(`/objects/${r.id}`)}>
+                              <img src={photoUrl(r.photo_url || r.photo)} alt="" className={styles.thumbFancy} />
+                            </span>
+                          ) : t('common.none')}
+                        </td>
+                        <td>
+                          <button type="button" className={styles.objectChip} onClick={() => navigate(`/objects/${r.id}`)}>
+                            {r.name}
+                          </button>
+                        </td>
+                        <td>{r.code || t('common.none')}</td>
+                        <td>{r.object_type_name || t('common.none')}</td>
+                        <td className={styles.amountCell}>{formatNumberCell(r.limit_amount_override, 2) || t('common.none')}</td>
+                        <td>{r.address || t('common.none')}</td>
+                        <td className={tableStyles.actions}>
+                          <div className={styles.rowActions}>
+                            <button type="button" className={`${tableStyles.btnSm} ${styles.iconBtn}`} onClick={() => navigate(`/objects/${r.id}?tab=limits`)}>
+                              <span aria-hidden="true" className={styles.dot} />
+                              Лимиты
+                            </button>
+                            {canManage ? (
+                              <>
+                                <button type="button" className={`${tableStyles.btnSm} ${styles.iconBtn}`} onClick={() => navigate(`/objects/${r.id}/edit`)}>
+                                  <span aria-hidden="true" className={styles.dot} />
+                                  {t('common.edit')}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`${tableStyles.btnSm} ${tableStyles.btnDanger} ${styles.iconBtn}`}
+                                  onClick={() => requestDelete(r.id, r.name)}
+                                >
+                                  <span aria-hidden="true" className={styles.dot} />
+                                  {t('common.delete')}
+                                </button>
+                              </>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className={tableStyles.paginationDock}>
+                <PaginationBar
+                  page={page}
+                  pageCount={pages}
+                  total={count}
+                  onPageChange={setPage}
+                  pageSize={pageSize}
+                  onPageSizeChange={(size) => {
+                    setPageSize(size)
+                    setPage(1)
+                  }}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
         </div>
-      )}
+      </ListPageDataPanel>
     </div>
   )
 }
+

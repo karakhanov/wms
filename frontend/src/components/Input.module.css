@@ -1,0 +1,173 @@
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.required {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  transition: all 0.15s ease;
+
+  &.focused {
+    .input,
+    .textarea,
+    .select {
+      border-color: var(--accent);
+      box-shadow: var(--focus-ring);
+    }
+  }
+}
+
+/* ===== INPUT ===== */
+.input,
+.textarea,
+.select {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+
+  &::placeholder {
+    color: var(--muted);
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-dim);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--bg);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--focus-ring);
+  }
+}
+
+.input-left {
+  padding-left: 36px;
+}
+
+.input-right {
+  padding-right: 36px;
+}
+
+/* ===== ICONS ===== */
+.iconLeft,
+.iconRight {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.iconLeft {
+  left: 10px;
+}
+
+.iconRight {
+  right: 10px;
+}
+
+.wrapper:focus-within {
+  .iconLeft,
+  .iconRight {
+    color: var(--accent);
+  }
+}
+
+/* ===== TEXTAREA ===== */
+.textarea {
+  resize: vertical;
+  min-height: 96px;
+  max-height: 400px;
+  padding: 10px 12px;
+  font-family: var(--font);
+}
+
+/* ===== SELECT ===== */
+.select {
+  appearance: none;
+  background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 20px;
+  padding-right: 32px;
+  cursor: pointer;
+
+  option {
+    background: var(--bg);
+    color: var(--text);
+  }
+}
+
+/* ===== ERROR STATE ===== */
+.inputError {
+  border-color: var(--danger) !important;
+  background-color: rgba(248, 81, 73, 0.04);
+
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(248, 81, 73, 0.2);
+  }
+}
+
+.error {
+  font-size: 11px;
+  color: var(--danger);
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ===== FORM GROUP ===== */
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+/* ===== LIGHT THEME ===== */
+html[data-theme='light'] {
+  .select {
+    background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23111827" stroke-width="2"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e');
+  }
+}

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from construction.services.limits import validate_items_for_object_limits
 from .models import (
     Order,
     OrderItem,
@@ -64,11 +65,30 @@ class OrderCreateSerializer(serializers.ModelSerializer):
 class MaterialRequestItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_sku = serializers.CharField(source="product.sku", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_code = serializers.CharField(source="service.code", read_only=True)
 
     class Meta:
         model = MaterialRequestItem
-        fields = ("id", "product", "product_name", "product_sku", "quantity", "issued_quantity")
+        fields = (
+            "id",
+            "product",
+            "product_name",
+            "product_sku",
+            "service",
+            "service_name",
+            "service_code",
+            "quantity",
+            "issued_quantity",
+        )
         read_only_fields = ("issued_quantity",)
+
+    def validate(self, attrs):
+        product = attrs.get("product")
+        service = attrs.get("service")
+        if bool(product) == bool(service):
+            raise serializers.ValidationError("Укажите либо товар, либо услугу.")
+        return attrs
 
 
 class MaterialRequestListSerializer(serializers.ModelSerializer):
@@ -135,6 +155,13 @@ class MaterialRequestCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if not attrs.get("construction_object") and not attrs.get("object_name"):
             raise serializers.ValidationError("Укажите строительный объект или название объекта.")
+        items = attrs.get("items") or []
+        construction_object = attrs.get("construction_object")
+        if items and construction_object:
+            try:
+                validate_items_for_object_limits(construction_object, items)
+            except ValueError as exc:
+                raise serializers.ValidationError(str(exc))
         return attrs
 
     def create(self, validated_data):
@@ -153,6 +180,9 @@ class IssueNoteItemSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source="product.sku", read_only=True)
     product_category_name = serializers.CharField(source="product.category.name", read_only=True, allow_null=True)
     product_unit = serializers.CharField(source="product.unit", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_code = serializers.CharField(source="service.code", read_only=True)
+    service_unit = serializers.CharField(source="service.unit", read_only=True)
     cell_label = serializers.SerializerMethodField()
 
     class Meta:
@@ -165,6 +195,10 @@ class IssueNoteItemSerializer(serializers.ModelSerializer):
             "product_sku",
             "product_category_name",
             "product_unit",
+            "service",
+            "service_name",
+            "service_code",
+            "service_unit",
             "quantity",
             "actual_quantity",
             "inspection_photos",
@@ -174,6 +208,13 @@ class IssueNoteItemSerializer(serializers.ModelSerializer):
             "cell_label",
         )
         read_only_fields = ("actual_quantity", "inspection_photos", "inspection_comment", "cell", "cell_label")
+
+    def validate(self, attrs):
+        product = attrs.get("product")
+        service = attrs.get("service")
+        if bool(product) == bool(service):
+            raise serializers.ValidationError("Укажите либо товар, либо услугу.")
+        return attrs
 
     def get_cell_label(self, obj):
         return str(obj.cell) if obj.cell_id else ""
@@ -259,6 +300,13 @@ class IssueNoteCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Укажите объект или заявку.")
         if request_obj and request_obj.status != MaterialRequest.Status.APPROVED:
             raise serializers.ValidationError("Если выбрана заявка, она должна быть одобрена.")
+        effective_object = construction_object or getattr(request_obj, "construction_object", None)
+        items = attrs.get("items") or []
+        if items and effective_object:
+            try:
+                validate_items_for_object_limits(effective_object, items)
+            except ValueError as exc:
+                raise serializers.ValidationError(str(exc))
         return attrs
 
     def create(self, validated_data):

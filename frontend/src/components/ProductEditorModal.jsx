@@ -84,7 +84,8 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
           is_active: p.is_active !== false,
           photo: null,
         })
-        if (p.photo) setPhotoPreview(p.photo.startsWith('http') ? p.photo : `/${p.photo}`.replace('//', '/'))
+        const ph = p.photo_url || p.photo
+        if (ph) setPhotoPreview(ph.startsWith('http') ? ph : `/${ph}`.replace(/^\/+/, '/'))
         else setPhotoPreview(null)
       })
       .catch(() => setError('Not found'))
@@ -156,7 +157,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
 
   return (
     <>
-      <Modal open={open} title={title} onClose={closeMainOrNested} wide>
+      <Modal open={open} title={title} onClose={closeMainOrNested} wide drawer>
         <form onSubmit={handleSubmit} className={`${formStyles.form} ${formStyles.formModal}`}>
           {error && <div className={formStyles.error}>{error}</div>}
           <div className={formStyles.row}>
@@ -232,7 +233,7 @@ export default function ProductEditorModal({ open, productId, onClose, onSaved }
               ) : (
                 <div className={formStyles.photoPlaceholder}>{t('common.none')}</div>
               )}
-              <input type="file" accept="image/*" onChange={handlePhotoChange} />
+              <input className={formStyles.input} type="file" accept="image/*" onChange={handlePhotoChange} />
             </div>
           </div>
           <div className={`${formStyles.row} ${formStyles.checkRow}`}>

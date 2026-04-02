@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { orders as ordersApi } from '../api'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
+import EmptyState from '../components/EmptyState'
 import SortHeader from '../components/SortHeader'
 import StatusBadge from '../components/StatusBadge'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
@@ -12,6 +13,7 @@ import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import { inDateRange } from '../utils/dateFilter'
 import { orderStatusLabel } from '../utils/statusLabel'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect, ToolbarFilterDateInput } from '../components/ToolbarControls'
 import styles from './Table.module.css'
 
 export default function Orders() {
@@ -28,6 +30,7 @@ export default function Orders() {
   const [dateTo, setDateTo] = useState('')
   const [sortKey, setSortKey] = useState('id')
   const [sortDir, setSortDir] = useState('desc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
 
   const orderStatusText = (row) => orderStatusLabel(t, row?.status, row?.status_display || row?.status || '')
 
@@ -71,6 +74,12 @@ export default function Orders() {
   }, [rows, sortKey, sortDir])
   const count = tableData.count ?? rows.length
   const pages = totalPages(count, pageSize)
+  const rawOnPage = (tableData.results || []).length
+  const listEmptyHint = useMemo(() => {
+    if (sortedRows.length > 0) return ''
+    if (rawOnPage > 0) return t('common.emptyStateFiltered')
+    return t('common.emptyStateHintList')
+  }, [sortedRows.length, rawOnPage, t])
 
   const toggleSort = (key) => {
     if (sortKey === key) {
@@ -102,74 +111,87 @@ export default function Orders() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.h1}>{t('orders.title')}</h1>
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
-      >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
-            setPage(1)
-          }}
-          aria-label={t('orders.status')}
-        >
-          <option value="">{t('orders.statusAll')}</option>
-          <option value="created">{t('orders.statusCreated')}</option>
-          <option value="picking">{t('orders.statusPicking')}</option>
-          <option value="shipped">{t('orders.statusShipped')}</option>
-        </select>
-        <select className={toolbarStyles.filterSelect} value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
-          <option value="">{t('common.allTime')}</option>
-          <option value="today">{t('common.today')}</option>
-          <option value="week">{t('common.thisWeek')}</option>
-          <option value="month">{t('common.thisMonth')}</option>
-          <option value="custom">{t('common.customRange')}</option>
-        </select>
-        {datePreset === 'custom' ? (
+      <ListPageDataPanel
+        flushTop
+        title={t('orders.title')}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
+        )}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
           <>
-            <input className={toolbarStyles.filterSelect} type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
-            <input className={toolbarStyles.filterSelect} type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+            <ToolbarFilterSelect
+              value={status}
+              onChange={(e) => {
+                setStatus(e.target.value)
+                setPage(1)
+              }}
+              aria-label={t('orders.status')}
+            >
+              <option value="">{t('orders.statusAll')}</option>
+              <option value="created">{t('orders.statusCreated')}</option>
+              <option value="picking">{t('orders.statusPicking')}</option>
+              <option value="shipped">{t('orders.statusShipped')}</option>
+            </ToolbarFilterSelect>
+            <ToolbarFilterSelect value={datePreset} onChange={(e) => { setDatePreset(e.target.value); setPage(1) }}>
+              <option value="">{t('common.allTime')}</option>
+              <option value="today">{t('common.today')}</option>
+              <option value="week">{t('common.thisWeek')}</option>
+              <option value="month">{t('common.thisMonth')}</option>
+              <option value="custom">{t('common.customRange')}</option>
+            </ToolbarFilterSelect>
+            {datePreset === 'custom' ? (
+              <>
+                <ToolbarFilterDateInput type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1) }} aria-label={t('common.dateFrom')} />
+                <ToolbarFilterDateInput type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1) }} aria-label={t('common.dateTo')} />
+              </>
+            ) : null}
           </>
-        ) : null}
-      </TableToolbar>
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('orders.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('orders.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('orders.status')} sortKey="status" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('orders.client')} sortKey="client" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map((o) => (
-                  <tr key={o.id}>
-                    <td>{o.id}</td>
-                    <td>{o.created_at?.slice(0, 10)}</td>
-                    <td>
-                      <StatusBadge value={orderStatusText(o)} toneValue={o.status} />
-                    </td>
-                    <td>{o.client_name || t('common.none')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar
+        )}
+      >
+        <div className={styles.listTableShell}>
+          {sortedRows.length === 0 ? (
+            <EmptyState hint={listEmptyHint} compact />
+          ) : (
+            <DataTable
+              columns={[
+                { key: 'id', header: <SortHeader className={styles.sortableHeader} label={t('orders.id')} sortKey="id" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'date', header: <SortHeader className={styles.sortableHeader} label={t('orders.date')} sortKey="date" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'status', header: <SortHeader className={styles.sortableHeader} label={t('orders.status')} sortKey="status" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+                { key: 'client', header: <SortHeader className={styles.sortableHeader} label={t('orders.client')} sortKey="client" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} showInactiveHint /> },
+              ]}
+              rows={sortedRows}
+              rowKey="id"
+              selection={{
+                selectedIds,
+                onToggleAll: (checked) => setSelectedIds(checked ? new Set(sortedRows.map((o) => o.id)) : new Set()),
+                onToggleOne: (id, checked) => {
+                  const next = new Set(selectedIds)
+                  if (checked) next.add(id)
+                  else next.delete(id)
+                  setSelectedIds(next)
+                },
+              }}
+              renderCell={(o, col) => {
+                if (col.key === 'id') return o.id
+                if (col.key === 'date') return o.created_at?.slice(0, 10)
+                if (col.key === 'status') return <StatusBadge value={orderStatusText(o)} toneValue={o.status} />
+                if (col.key === 'client') return o.client_name || t('common.none')
+                return null
+              }}
               page={page}
               pageCount={pages}
               total={count}
@@ -177,10 +199,15 @@ export default function Orders() {
               pageSize={pageSize}
               onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
               disabled={loading}
+              bulkActions={
+                <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+                  {t('common.exportExcel')}
+                </button>
+              }
             />
-          </div>
+          )}
         </div>
-      )}
+      </ListPageDataPanel>
     </div>
   )
 }

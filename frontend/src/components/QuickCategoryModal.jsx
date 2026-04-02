@@ -57,7 +57,7 @@ export default function QuickCategoryModal({
   }
 
   return (
-    <Modal open={open} title={t('categories.new')} onClose={() => !loading && onClose()} stacked={stackDepth}>
+    <Modal open={open} title={t('categories.new')} onClose={() => !loading && onClose()} stacked={stackDepth} drawer>
       <form onSubmit={handleSubmit} className={`${formStyles.form} ${formStyles.formModal}`}>
         {error && <div className={formStyles.error}>{error}</div>}
         <div className={formStyles.row}>

@@ -129,6 +129,17 @@ DEFAULT_ROLE_POLICY = {
         ],
         "write": [Role.Name.ADMIN, Role.Name.MANAGER],
     },
+    "services": {
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [Role.Name.ADMIN, Role.Name.MANAGER],
+    },
     "categories": {
         "read": [
             Role.Name.ADMIN,
@@ -265,6 +276,24 @@ DEFAULT_ROLE_POLICY = {
         ],
     },
     "sidebar_products": {
+        "read": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+        "write": [
+            Role.Name.ADMIN,
+            Role.Name.MANAGER,
+            Role.Name.STOREKEEPER,
+            Role.Name.FOREMAN,
+            Role.Name.PROCUREMENT,
+            Role.Name.WAREHOUSE_CONTROLLER,
+        ],
+    },
+    "sidebar_services": {
         "read": [
             Role.Name.ADMIN,
             Role.Name.MANAGER,

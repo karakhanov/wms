@@ -94,6 +94,27 @@ npm run dev
 
 Оформление UI (сейчас: **glass**, вариант D): см. `docs/FRONTEND_UI_OPTIONS.md`.
 
+### 4. Linux-сервер: восстановление БД и медиа
+
+После `git pull` можно поднять данные из каталога **`deploy-export/`** (см. `deploy-export/README.txt`):
+
+- `database.dump` — custom-формат PostgreSQL (`pg_restore`)
+- `media.zip` — содержимое `backend/media`
+
+Переменные **`POSTGRES_*`** должны совпадать с `backend/.env` на сервере. Скрипт сам подберёт **`pg_restore`**, если дамп сделан версией PostgreSQL новее, чем клиент в `PATH` (например, ищет `/usr/lib/postgresql/18/bin/pg_restore` на Debian/Ubuntu с PGDG). При необходимости задайте явно:
+
+`export PGRESTORE_BIN=/usr/lib/postgresql/18/bin/pg_restore`
+
+```bash
+cd /path/to/wms   # корень репозитория
+set -a && source backend/.env && set +a
+bash scripts/server-restore.sh deploy-export/database.dump deploy-export/media.zip
+```
+
+Второй аргумент (zip) можно опустить, если рядом с дампом лежит **`media.zip`** или **`wms_media_export.zip`**. После восстановления: `python manage.py migrate`, перезапуск gunicorn (или вашего сервиса), при необходимости `collectstatic` и сборка фронта.
+
+**Совместимость версий PostgreSQL:** сервер БД должен понимать объекты из дампа. Если дамп снят с PostgreSQL 18, а кластер на сервере — 14, восстановление в эту БД не получится; нужен кластер той же (или более новой) мажорной версии, что и при экспорте, либо повторный дамп с совместимой версии.
+
 ---
 
 ## Структура проекта
@@ -114,6 +135,8 @@ wms/
 │   ├── reports/         # Отчёты (движение, нехватка, популярные)
 │   └── notifications/   # Уведомления
 ├── frontend/            # React SPA (Vite)
+├── scripts/             # server-restore.sh, скрипты экспорта (PowerShell)
+├── deploy-export/       # пример переноса: database.dump, media.zip (см. README внутри)
 ├── docs/                # Доп. документация (архитектура, BPMN, UI)
 ├── requirements.txt
 └── requirements-dev.txt # pytest + pytest-django (опционально)

@@ -4,11 +4,12 @@ import { products as api } from '../api'
 import { useAuth } from '../auth'
 import { canManageCategories } from '../permissions'
 import Modal from '../components/Modal'
+import ConfirmDeleteModal from '../components/ConfirmDeleteModal'
 import FkSelectRow from '../components/FkSelectRow'
 import QuickCategoryModal from '../components/QuickCategoryModal'
-import TableToolbar from '../components/TableToolbar'
+import ListPageDataPanel from '../components/ListPageDataPanel'
 import SortHeader from '../components/SortHeader'
-import PaginationBar from '../components/PaginationBar'
+import DataTable from '../components/DataTable'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { downloadCsv } from '../utils/csvExport'
 import { normalizeListResponse, totalPages } from '../utils/listResponse'
@@ -16,6 +17,7 @@ import { DEFAULT_PAGE_SIZE } from '../constants/pagination'
 import styles from './Table.module.css'
 import formStyles from './Form.module.css'
 import toolbarStyles from '../components/TableToolbar.module.css'
+import { ToolbarSearchInput, ToolbarFilterSelect } from '../components/ToolbarControls'
 
 function getList(d) {
   return d?.results ?? d ?? []
@@ -36,8 +38,10 @@ export default function Categories() {
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', parent: '' })
   const [quickCatOpen, setQuickCatOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [sortKey, setSortKey] = useState('name')
   const [sortDir, setSortDir] = useState('asc')
+  const [selectedIds, setSelectedIds] = useState(new Set())
   const canManage = canManageCategories(user)
 
   useEffect(() => {
@@ -102,10 +106,7 @@ export default function Categories() {
     }
   }
 
-  const remove = (id, name) => {
-    if (!window.confirm(t('common.confirmDelete') + '\n' + name)) return
-    api.categoryDelete(id).then(() => reloadAll()).catch((e) => alert(e.response?.data?.detail || 'Error'))
-  }
+  const requestDelete = (id, name) => setDeleteTarget({ id, name })
 
   const closeMainOrNested = () => {
     if (quickCatOpen) {
@@ -164,7 +165,7 @@ export default function Categories() {
     <div className={styles.page}>
       {canManage && (
         <>
-          <Modal open={formOpen} title={modalTitle} onClose={closeMainOrNested}>
+          <Modal open={formOpen} title={modalTitle} onClose={closeMainOrNested} drawer>
             <form onSubmit={save} className={`${formStyles.form} ${formStyles.formModal}`}>
               <div className={formStyles.row}>
                 <label>{t('categories.name')} *</label>
@@ -223,89 +224,111 @@ export default function Categories() {
               }
             }}
           />
+
+          <ConfirmDeleteModal
+            open={!!deleteTarget}
+            itemName={deleteTarget?.name}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={() => {
+              if (!deleteTarget) return Promise.resolve()
+              return api.categoryDelete(deleteTarget.id).then(() => reloadAll())
+            }}
+          />
         </>
       )}
 
-      <div className={styles.pageHead}>
-        <div>
-          <h1 className={styles.h1}>{t('categories.title')}</h1>
-        </div>
-        {canManage && (
+      <ListPageDataPanel
+        flushTop
+        title={t('categories.title')}
+        leadExtra={canManage ? (
           <button type="button" className={styles.btnAdd} onClick={openCreate}>
             {t('common.add')}
           </button>
+        ) : null}
+        loading={loading}
+        exportButton={(
+          <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+            {t('common.exportExcel')}
+          </button>
         )}
-      </div>
-
-      <TableToolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v)
-          setPage(1)
-        }}
-        onExport={exportCsv}
-        exportDisabled={loading}
+        search={(
+          <ToolbarSearchInput
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder={t('common.searchPlaceholder')}
+            aria-label={t('common.searchPlaceholder')}
+          />
+        )}
+        filters={(
+          <ToolbarFilterSelect
+            value={parentFilter}
+            onChange={(e) => {
+              setParentFilter(e.target.value)
+              setPage(1)
+            }}
+            aria-label={t('categories.parent')}
+          >
+            <option value="">{t('common.all')}</option>
+            {allCats.map((c) => (
+              <option key={c.id} value={String(c.id)}>
+                {c.name}
+              </option>
+            ))}
+          </ToolbarFilterSelect>
+        )}
       >
-        <select
-          className={toolbarStyles.filterSelect}
-          value={parentFilter}
-          onChange={(e) => {
-            setParentFilter(e.target.value)
-            setPage(1)
+        <DataTable
+          columns={[
+            { key: 'name', header: <SortHeader className={styles.sortableHeader} label={t('categories.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            { key: 'parent', header: <SortHeader className={styles.sortableHeader} label={t('categories.parent')} sortKey="parent" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} /> },
+            ...(canManage ? [{ key: 'actions', header: t('common.actions') }] : []),
+          ]}
+          rows={sortedList}
+          rowKey="id"
+          selection={{
+            selectedIds,
+            onToggleAll: (checked) => setSelectedIds(checked ? new Set(sortedList.map((c) => c.id)) : new Set()),
+            onToggleOne: (id, checked) => {
+              const next = new Set(selectedIds)
+              if (checked) next.add(id)
+              else next.delete(id)
+              setSelectedIds(next)
+            },
           }}
-          aria-label={t('categories.parent')}
-        >
-          <option value="">{t('common.all')}</option>
-          {allCats.map((c) => (
-            <option key={c.id} value={String(c.id)}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </TableToolbar>
-
-      {loading ? (
-        <div>{t('common.loading')}</div>
-      ) : (
-        <div className={styles.pageBody}>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <SortHeader className={styles.sortableHeader} label={t('categories.name')} sortKey="name" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  <SortHeader className={styles.sortableHeader} label={t('categories.parent')} sortKey="parent" activeKey={sortKey} sortDir={sortDir} onToggle={toggleSort} />
-                  {canManage && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {sortedList.map((c) => (
-                  <tr key={c.id}>
-                    <td>{c.name}</td>
-                    <td>{allCats.find((x) => x.id === c.parent)?.name ?? t('common.none')}</td>
-                    {canManage && (
-                      <td className={styles.actions}>
-                        <button type="button" className={styles.btnSm} onClick={() => openEdit(c)}>
-                          {t('common.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`${styles.btnSm} ${styles.btnDanger}`}
-                          onClick={() => remove(c.id, c.name)}
-                        >
-                          {t('common.delete')}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className={styles.paginationDock}>
-            <PaginationBar page={page} pageCount={pages} total={count} onPageChange={setPage} pageSize={pageSize} onPageSizeChange={(size) => { setPageSize(size); setPage(1) }} disabled={loading} />
-          </div>
-        </div>
-      )}
+          renderCell={(c, col) => {
+            if (col.key === 'name') return c.name
+            if (col.key === 'parent') return allCats.find((x) => x.id === c.parent)?.name ?? t('common.none')
+            if (col.key === 'actions' && canManage) {
+              return (
+                <span className={styles.actions}>
+                  <button type="button" className={styles.btnSm} onClick={() => openEdit(c)}>
+                    {t('common.edit')}
+                  </button>
+                  <button type="button" className={`${styles.btnSm} ${styles.btnDanger}`} onClick={() => requestDelete(c.id, c.name)}>
+                    {t('common.delete')}
+                  </button>
+                </span>
+              )
+            }
+            return null
+          }}
+          page={page}
+          pageCount={pages}
+          total={count}
+          onPageChange={setPage}
+          pageSize={pageSize}
+          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          disabled={loading}
+          bulkActions={
+            <button type="button" className={toolbarStyles.btnExport} onClick={exportCsv} disabled={loading}>
+              {t('common.exportExcel')}
+            </button>
+          }
+        />
+      </ListPageDataPanel>
     </div>
   )
 }

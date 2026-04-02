@@ -1,0 +1,46 @@
+---
+description: Apply Inventory Dashboard UI Kit style system-wide
+globs:
+  - "frontend/src/**/*.jsx"
+  - "frontend/src/**/*.css"
+alwaysApply: true
+---
+
+# Inventory UI Kit Rule
+
+Reference design:
+https://www.figma.com/design/gmroR89dCMJN6pgoLzuUPd/Inventory-Management-Dashboard--Community-?node-id=0-1&p=f&t=eulh6st6wbGjpqEs-0
+
+## Core visual direction
+
+- Use clean light surfaces with soft contrast and readable hierarchy.
+- Keep radius consistent (10/12/16), thin borders, subtle shadows.
+- Avoid heavy gradients and glossy glass effects.
+- Keep spacing rhythm consistent: 8, 12, 16, 24.
+- Prioritize scanability for tables, cards, filters, and KPI blocks.
+
+## Page structure
+
+- Header row: page title, then contextual actions on the right.
+- Filter/toolbar row: compact controls, consistent input heights.
+- Main content in cards/panels with equal internal paddings.
+- Details pages: info card + media card + tabs + tab content.
+
+## Components
+
+- Buttons: primary solid, secondary ghost; no oversized pills.
+- Tables: sticky/simple headers, clear row hover, no ALL CAPS headers.
+- Forms: labels above fields, one visual style for all inputs/selects.
+- Badges: neutral/info/success/warning/danger via muted backgrounds.
+- Pagination: compact, same size and radius as toolbar controls.
+
+## Interaction rules
+
+- List rows navigate to details pages (prefer route over modal details).
+- Keep edit mode inline on details pages where possible.
+- Show loading, empty, and error states with the same card style.
+
+## Number formatting
+
+- Format quantities, currency, and totals consistently across all pages.
+- Use readable separators and fixed precision per metric type.

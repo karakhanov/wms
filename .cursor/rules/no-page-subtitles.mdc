@@ -1,0 +1,11 @@
+---
+description: Keep page headers concise without subtitle/lead text
+globs: frontend/src/pages/**/*.{js,jsx,ts,tsx}
+alwaysApply: false
+---
+
+# No Page Subtitles
+
+- In page header blocks, render only the main page title (`h1`).
+- Do not add subtitle/description text under page title (`lead`, muted helper lines, or descriptive paragraphs under `h1`).
+- If additional guidance is needed, place it in contextual UI blocks (filters, cards, hints), not in the page header.

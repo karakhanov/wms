@@ -89,6 +89,50 @@ export function IconChevronDown({ className, size = 18 }) {
   )
 }
 
+/** Пустой список / нет данных */
+export function IconEmptyBox({ className, size = 48 }) {
+  return (
+    <Svg className={className} size={size} viewBox="0 0 24 24">
+      <path
+        d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}
+
+/** Объект / здание — плейсхолдер фото на карточке объекта */
+export function IconBuilding({ className, size = 64 }) {
+  return (
+    <Svg className={className} size={size} viewBox="0 0 24 24">
+      <path
+        d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 13h2M13 13h2M9 9h2M13 9h2"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 21v-5a1 1 0 011-1h2a1 1 0 011 1v5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Svg>
+  )
+}
+
 const NAV_PATHS = {
   dashboard: (
     <>

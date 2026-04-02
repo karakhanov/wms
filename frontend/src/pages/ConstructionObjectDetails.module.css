@@ -1,0 +1,208 @@
+/* Карточка объекта: табы, лимиты, плейсхолдеры */
+
+.emptyValue {
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-style: normal;
+}
+
+.backIconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-bottom: 10px;
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.backIconBtn:hover {
+  background: rgba(var(--accent-rgb), 0.08);
+  border-color: rgba(var(--accent-rgb), 0.25);
+  color: var(--text);
+}
+
+.photoPlaceholderBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 200px;
+  padding: 20px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed rgba(15, 23, 42, 0.12);
+  color: var(--muted);
+}
+
+html[data-theme='dark'] .photoPlaceholderBox {
+  background: rgba(15, 23, 42, 0.35);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.photoPlaceholderIcon {
+  color: rgba(45, 106, 79, 0.45);
+}
+
+html[data-theme='dark'] .photoPlaceholderIcon {
+  color: rgba(74, 222, 128, 0.35);
+}
+
+.objectTabsBar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 900px) {
+  .objectTabsBar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.objectTab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.35);
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, font-weight 0.1s ease;
+}
+
+html[data-theme='dark'] .objectTab {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.objectTab:hover {
+  color: var(--text);
+  border-color: rgba(45, 106, 79, 0.28);
+}
+
+.objectTabActive {
+  background: rgba(45, 106, 79, 0.18) !important;
+  border-color: rgba(45, 106, 79, 0.5) !important;
+  color: var(--text) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(45, 106, 79, 0.12);
+}
+
+html[data-theme='dark'] .objectTabActive {
+  background: rgba(45, 106, 79, 0.32) !important;
+  border-color: rgba(74, 222, 128, 0.35) !important;
+}
+
+.limitPositionName {
+  display: block;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.3;
+}
+
+.limitPositionCode {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.utilCell {
+  min-width: 120px;
+}
+
+.utilBarTrack {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+html[data-theme='dark'] .utilBarTrack {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.utilBarFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease, background 0.2s ease;
+  max-width: 100%;
+}
+
+.utilBarGreen {
+  background: linear-gradient(90deg, #2d6a4f, #40916c);
+}
+
+.utilBarYellow {
+  background: linear-gradient(90deg, #d4a017, #eab308);
+}
+
+.utilBarRed {
+  background: linear-gradient(90deg, #c2410c, #ef4444);
+}
+
+.utilPercent {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.limitsEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 36px 20px;
+  text-align: center;
+  border-radius: 12px;
+  border: 1px dashed var(--glass-border);
+  background: rgba(255, 255, 255, 0.25);
+}
+
+html[data-theme='dark'] .limitsEmpty {
+  background: rgba(15, 23, 42, 0.25);
+}
+
+.limitsEmptyIcon {
+  color: var(--muted);
+  opacity: 0.65;
+}
+
+.limitsEmptyTitle {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.limitsEmptyHint {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--muted);
+  max-width: 320px;
+  line-height: 1.45;
+}
+
+.filteredEmpty {
+  padding: 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
